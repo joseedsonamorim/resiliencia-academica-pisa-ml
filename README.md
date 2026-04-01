@@ -1,5 +1,4 @@
-# Copyright (c) 2026 Jose Edson Amorim Sebastiao. Todos os direitos reservados.
-# Resiliencia Academica PISA ML - Funcionamento Completo
+# Modelagem Preditiva do Pensamento Criativo com Dados de Larga Escala do PISA 2022: Uma Abordagem via Aprendizado de Máquina Explicável
 
 ## Funcionamento do Projeto
 1. **Carregamento e Limpeza (Fase 2)**: `src/data_loader.py` carrega PISA 2022 CSV/Parquet, filtra LATAM, remove alunos sem PV1MATH, imputa ESCS/HISEI/HOMEPOS por pais.
