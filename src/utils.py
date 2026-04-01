@@ -18,7 +18,7 @@ def create_resilience_target(df: pd.DataFrame) -> pd.DataFrame:
     df['performance'] = (df.get('avg_PVREAD', 0) + df.get('avg_PVMATH', 0) + df.get('avg_PVSCIE', 0)) / 3
     df['expected_perf'] = 450 + df['ESCS'] * 100
     df['resilient'] = ((df['performance'] > df['expected_perf'] + 50) & (df['ESCS'] < 0)).astype(int)
-    st.info(f\"Legacy Resilientes: {df['resilient'].mean():.1%}\")
+    st.info(f"Legacy Resilientes: {df['resilient'].mean():.1%}")
     return df
 
 def create_resilient_quartiles_target(df: pd.DataFrame) -> pd.DataFrame:
@@ -26,20 +26,20 @@ def create_resilient_quartiles_target(df: pd.DataFrame) -> pd.DataFrame:
     escs_q1 = df['ESCS'].quantile(0.25)
     math_q4 = df['PV1MATH'].quantile(0.75)
     df['resilient_quartiles'] = ((df['ESCS'] <= escs_q1) & (df['PV1MATH'] >= math_q4)).astype(int)
-    st.info(f\"Resil quartiles: {df['resilient_quartiles'].mean():.1%} ({df['resilient_quartiles'].sum()}/{len(df)})\")
+    st.info(f"Resil quartiles: {df['resilient_quartiles'].mean():.1%} ({df['resilient_quartiles'].sum()}/{len(df)})")
     return df
 
 def prepare_cluster_data(df: pd.DataFrame):
     df = create_resilient_quartiles_target(df.copy())
     resilient_df = df[df['resilient_quartiles'] == 1].copy()
     if len(resilient_df) < 4:
-        st.warning(\"Poucos resilientes, usando todos.\")
+        st.warning("Poucos resilientes, usando todos.")
         resilient_df = df.copy()
     features = ['ESCS', 'HISEI', 'HOMEPOS', 'PV1MATH']
     X = resilient_df[features].dropna()
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
-    st.info(f\"Clustering {len(X)} amostras.\")
+    st.info(f"Clustering {len(X)} amostras.")
     return X_scaled, scaler, resilient_df[features], features
 
 def get_features():

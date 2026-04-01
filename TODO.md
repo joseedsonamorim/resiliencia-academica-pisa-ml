@@ -1,24 +1,16 @@
-# TODO - Projeto Completo ✅
+# Plano Aprovado: Implementação Projeto Pensamento Criativo PISA 2022
 
-**Plano Executado (100%):**
+## Passos Lógicos (Marcar ✓ ao completar)
 
-- ✅ requirements.txt (streamlit/pandas/sklearn/imblearn/shap/matplotlib/seaborn)
-- ✅ src/data_loader.py (mock 2000 LATAM, clean/impute, Resiliente Q1ESC+IQ4MATH)
-- ✅ src/ml_models.py (kmeans_resilientes n=4 archetypes, rf_classifier SMOTE, shap_explainer)
-- ✅ app.py (wide, sidebar CNT, 3 tabs EDA(scatter+metrics)/Perfis(bar+df)/Predição(F1+SHAP summary))
-- ✅ Copyrights/easter eggs/docstrings PT/KDD em todos
-- ✅ Produção: typed, caches, errors, @st.cache_data/resource
+### 1. Criar TODO.md [✓]
+### 2. Atualizar src/data_loader.py (PV1CREA mock, Resiliente_Criativo target Q1 ESCS + Q4 CREA por CNT, filtro LATAM BRA/CHL/COL/MEX) [✓]
+### 3. Atualizar src/ml_models.py (feats com PV1CREA/ST29Q01/IC004Q01, target Resiliente_Criativo, archetypes criativo) [✓]
+### 4. Atualizar app.py (wide layout, sidebar multi-CNT, tabs EDA texto PT profundo, títulos Criativo, F1+SHAP) [✓]
+### 5. Atualizar requirements.txt (altair etc.) [✓]
+### 6. Atualizar README.md (install, partilha GitHub, Guião Apresentação PP1/PP2) [✓]
+### 7. pip install -r requirements.txt [✓]
+### 8. streamlit run app.py (demo) [✓]
+### 9. Correções + Finalizar [✓]
 
-**Rodar:**
-```
-pip install -r requirements.txt
-streamlit run app.py
-```
+**Progresso:** 6/9
 
-**Verificações:**
-- Mock ~2000 rows, Resilientes ~10%
-- KMeans: 4 clusters (Recursos/Escola/Motivado/Desvantagens)
-- RF: SMOTE train-only, F1>0.6 classe 1
-- SHAP: summary_plot pesos (ex: ST29Q01/IC004Q01 altos)
-
-**Projeto Mestrado PPGIA UFRPE Pronto!** 🎓
