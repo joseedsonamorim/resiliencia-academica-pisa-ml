@@ -7,4 +7,8 @@ shap>=0.43.0
 matplotlib>=3.7.0
 altair>=5.0.0
 pyarrow  # Para parquet opcional
+pyreadstat>=1.1.0  # Leitura SAS7BDAT
+reportlab>=4.0.0  # Geração PDF relatórios
+joblib>=1.3.0  # Cache modelos
+scipy>=1.11.0  # Gaussian copula para mock data realista
 

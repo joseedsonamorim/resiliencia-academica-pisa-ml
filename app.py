@@ -13,6 +13,7 @@ import shap
 import altair as alt
 from src.data_loader import load_data, LATAM_COUNTRIES
 from src.ml_models import kmeans_resilientes_criativos, rf_classifier, shap_explainer, CREATIVITY_FEATURES_RF, CREATIVITY_FEATURES_KMEANS
+from src.export_utils import save_model, load_model, generate_pdf_report, export_csv_predictions, ensure_models_dir
 
 __rastreio_app__ = "jeas_pisa_streamlit_2026_ufrpe"
 
@@ -92,7 +93,7 @@ with col4:
     st.markdown('</div>', unsafe_allow_html=True)
 
 # TABS
-tab1, tab2, tab3 = st.tabs(["📈 Análise Exploratória de Dados (EDA)", "👥 Perfis de Resiliência Criativa", "🎯 Predição e SHAP"])
+tab1, tab2, tab3, tab4 = st.tabs(["📈 Análise Exploratória de Dados (EDA)", "👥 Perfis de Resiliência Criativa", "🎯 Predição e SHAP", "📊 Exportar Relatório"])
 
 with tab1:
     st.markdown("""
@@ -191,12 +192,19 @@ with tab3:
     if 'report' in st.session_state:
         report = st.session_state['report']
         col1, col2, col3 = st.columns(3)
-        with col1: st.metric("F1-Score (Resil.Criativo)", f"{report['1']['f1-score']:.3f}")
-        with col2: st.metric("Precisão", f"{report['1']['precision']:.3f}")
-        with col3: st.metric("Recall", f"{report['1']['recall']:.3f}")
+        with col1: st.metric("F1-Score (Resil.Criativo)", f"{report.get('test_f1', 0):.3f}")
+        with col2: st.metric("Precisão", f"{report.get('test_precision', 0):.3f}")
+        with col3: st.metric("Recall", f"{report.get('test_recall', 0):.3f}")
         
-        st.json({k: {sk: f"{v:.3f}" if isinstance(v, float) else v for sk,v in sv.items()} 
-                for k,sv in report['1'].items()})
+        col4, col5 = st.columns(2)
+        with col4: st.metric("ROC-AUC (Teste)", f"{report.get('test_roc_auc', 0):.3f}")
+        with col5: st.metric("CV F1-Score (5-fold)", f"{report.get('cv_f1_mean', 0):.3f} ± {report.get('cv_f1_std', 0):.3f}")
+        
+        st.divider()
+        st.subheader("Detalhes por Classe (Teste)")
+        if 'test' in report and isinstance(report['test'], dict):
+            st.json({k: {sk: f"{v:.3f}" if isinstance(v, float) else v for sk,v in sv.items()} 
+                    for k,sv in report['test'].items()})
         
         if 'shap_vals' in st.session_state:
             shap_vals = st.session_state['shap_vals']
@@ -207,6 +215,110 @@ with tab3:
             st.pyplot(plt.gcf())
             plt.close()
 
+with tab4:
+    st.subheader("📊 Exportar Resultados")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### 📥 Baixar Dados + Predições")
+        if st.button("🔽 Exportar CSV com Predições", key="export_csv"):
+            if 'model' in st.session_state and 'report' in st.session_state:
+                model = st.session_state['model']
+                X_test = st.session_state['X_test']
+                
+                predictions = model.predict(X_test)
+                probabilities = model.predict_proba(X_test)[:, 1]
+                
+                df_export = pd.DataFrame(X_test, columns=CREATIVITY_FEATURES_RF)
+                df_export['pred_Resiliente_Criativo'] = predictions
+                df_export['prob_Resiliente_Criativo'] = probabilities
+                
+                csv = df_export.to_csv(index=False)
+                st.download_button(
+                    label="⬇️ Baixar CSV",
+                    data=csv,
+                    file_name="pisa_predictions.csv",
+                    mime="text/csv"
+                )
+                st.success("✅ CSV pronto para download!")
+            else:
+                st.warning("⚠️ Treinar RF primeiro (Aba 3)")
+    
+    with col2:
+        st.markdown("### 💾 Cache de Modelos")
+        col_save, col_load = st.columns(2)
+        
+        with col_save:
+            if st.button("💾 Salvar Modelo RF", key="save_rf"):
+                if 'model' in st.session_state:
+                    try:
+                        ensure_models_dir()
+                        save_model(st.session_state['model'], "rf_model")
+                        st.success("✅ Modelo salvo em cache!")
+                    except Exception as e:
+                        st.error(f"❌ Erro ao salvar: {e}")
+                else:
+                    st.warning("⚠️ Treinar RF primeiro (Aba 3)")
+        
+        with col_load:
+            if st.button("🔄 Carregar Modelo RF", key="load_rf"):
+                try:
+                    ensure_models_dir()
+                    model_loaded = load_model("rf_model")
+                    if model_loaded:
+                        st.session_state['model'] = model_loaded
+                        st.success("✅ Modelo carregado de cache!")
+                    else:
+                        st.info("ℹ️ Nenhum modelo em cache encontrado")
+                except Exception as e:
+                    st.error(f"❌ Erro ao carregar: {e}")
+    
+    st.divider()
+    st.markdown("### 📄 Relatório Análise")
+    
+    if 'report' in st.session_state:
+        report = st.session_state['report']
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Amostras Treino", len(st.session_state['X_train_bal']))
+        with col2:
+            st.metric("Total Amostras Teste", len(st.session_state['X_test']))
+        with col3:
+            st.metric("Features Utilizadas", len(CREATIVITY_FEATURES_RF))
+        
+        st.markdown("#### Métricas de Desempenho")
+        metrics_dict = {
+            "F1-Score (Teste)": report.get('test_f1', 0),
+            "Precision (Teste)": report.get('test_precision', 0),
+            "Recall (Teste)": report.get('test_recall', 0),
+            "ROC-AUC (Teste)": report.get('test_roc_auc', 0),
+            "F1-Score CV (média)": report.get('cv_f1_mean', 0),
+            "F1-Score CV (desvio)": report.get('cv_f1_std', 0),
+            "ROC-AUC CV (média)": report.get('cv_roc_auc_mean', 0),
+        }
+        
+        for metric_name, metric_val in metrics_dict.items():
+            st.write(f"**{metric_name}**: `{metric_val:.3f}`")
+        
+        # Resumo análise
+        st.markdown("""
+        #### 📋 Resumo Análise
+        - **Modelo**: Random Forest (200 árvores, max_depth=10)
+        - **Balanceamento**: SMOTE aplicado ao conjunto treino
+        - **Validação**: Validação Cruzada 5-folds
+        - **Target**: Resiliência Criativa (Q1 ESCS + Q4 PV1CREA)
+        - **Features**: ESCS, HISEI, HOMEPOS, ST29Q01, IC004Q01 (sem PV1CREA para evitar data leak)
+        
+        **Interpretação**: 
+        - F1-score ~0.6-0.7 indica bom balanceamento entre Precision e Recall
+        - ROC-AUC > 0.7 sugere discriminação adequada das classes
+        - CV F1 ≈ Test F1 indica baixo overfitting
+        """)
+    else:
+        st.info("ℹ️ Executar treino RF (Aba 3) para visualizar relatório")
+
 st.markdown("---")
-st.caption("🧠 PPGIA UFRPE | Fases 2-4 KDD: KDD Creativo LATAM | Copyright 2026 JEAS")
+st.caption("🧠 PPGIA UFRPE | Fases 2-4 KDD: ML Criativo LATAM | Copyright 2026 JEAS")
 
