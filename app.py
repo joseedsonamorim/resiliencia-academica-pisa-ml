@@ -13,7 +13,7 @@ import shap
 import altair as alt
 from src.data_loader import load_data, LATAM_COUNTRIES
 from src.ml_models import kmeans_resilientes_criativos, rf_classifier, shap_explainer, CREATIVITY_FEATURES_RF, CREATIVITY_FEATURES_KMEANS
-from src.export_utils import save_model, load_model, generate_pdf_report, export_csv_predictions, ensure_models_dir
+from src.export_utils import save_model, load_model, ensure_models_dir
 
 __rastreio_app__ = "jeas_pisa_streamlit_2026_ufrpe"
 
