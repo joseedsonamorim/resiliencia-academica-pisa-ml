@@ -1,0 +1,53 @@
+{
+  "timestamp": "2026-06-02T16:00:23.301174",
+  "description": "Cross-validation results",
+  "data": {
+    "logistic_regression": {
+      "best_score": 0.9509531624143343,
+      "best_params": {
+        "C": 0.01,
+        "class_weight": "balanced",
+        "max_iter": 1000,
+        "solver": "liblinear"
+      },
+      "mean_cv_score": 0.9438723835769137,
+      "std_cv_score": 0.005077195143044852
+    },
+    "random_forest": {
+      "best_score": 0.9578017917595574,
+      "best_params": {
+        "class_weight": "balanced_subsample",
+        "max_depth": 20,
+        "min_samples_leaf": 4,
+        "min_samples_split": 5,
+        "n_estimators": 200
+      },
+      "mean_cv_score": 0.9531205758625078,
+      "std_cv_score": 0.0025021064630983293
+    },
+    "xgboost": {
+      "best_score": 0.9599542771034597,
+      "best_params": {
+        "learning_rate": 0.05,
+        "max_depth": 4,
+        "n_estimators": 200,
+        "scale_pos_weight": 22.4,
+        "subsample": 0.8
+      },
+      "mean_cv_score": 0.9552812554472975,
+      "std_cv_score": 0.004525677755369665
+    },
+    "lightgbm": {
+      "best_score": 0.9652596296755016,
+      "best_params": {
+        "class_weight": "balanced",
+        "learning_rate": 0.05,
+        "max_depth": 4,
+        "n_estimators": 200,
+        "num_leaves": 20
+      },
+      "mean_cv_score": 0.9588975706390275,
+      "std_cv_score": 0.005363856284669272
+    }
+  }
+}

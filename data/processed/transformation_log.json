@@ -1,0 +1,45 @@
+{
+  "timestamp": "2026-06-02T15:57:06.845418",
+  "description": "Preprocessing transformation log",
+  "data": [
+    {
+      "stage": 1,
+      "operation": "exclude_leakage",
+      "removed_columns": 5,
+      "remaining_columns": 1269
+    },
+    {
+      "stage": 2,
+      "operation": "impute_missing",
+      "method": "knn",
+      "k_neighbors": 5,
+      "columns_dropped": 1018,
+      "columns_imputed": 251
+    },
+    {
+      "stage": 3,
+      "operation": "scale_features",
+      "method": "standard_scaler",
+      "features_scaled": 251
+    },
+    {
+      "stage": 4,
+      "operation": "feature_selection",
+      "method": "rfe",
+      "features_before": 251,
+      "features_after": 150,
+      "selected_features": [
+        "ESCS",
+        "ICTRES",
+        "HISCED",
+        "CR590Q59TT",
+        "CR590Q20S",
+        "CR590Q20TT",
+        "CR590Q43S",
+        "CR590Q52S",
+        "CR590Q52TT",
+        "CR590Q35TT"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,234 @@
+# Configuration file for Resiliência Criativa PISA Analysis Pipeline
+# All paths are relative to project root
+
+project:
+  name: "Análise de Resiliência Criativa - PISA 2022 Brasil"
+  version: "1.0.0"
+  author: "Research Team"
+
+paths:
+  data_raw: "./pisa_brasil_estudo_limpo.csv"
+  data_processed: "data/processed"
+  data_cache: "data/cache"
+  models: "models"
+  outputs_reproducibility: "outputs/reproducibility"
+  outputs_metrics: "outputs/metrics"
+  outputs_figures: "outputs/figures"
+  outputs_tables: "outputs/tables"
+  outputs_reports: "outputs/reports"
+
+# Reproducibility
+random_state: 42
+seed_numpy: 42
+seed_sklearn: 42
+
+# Data Configuration
+data:
+  # Key columns
+  target_column: "Creative_Resilience"
+  crt_score_column: "CRT_SCORE"
+  escs_column: "ESCS"
+  student_id: "CNTSTUID"
+  sample_weight: "W_FSTUWT"
+
+  # Features to exclude (leakage + administrative)
+  forbidden_features:
+    - "CRT_SCORE"
+    - "Status"
+    - "Grupo_ESCS"
+    - "CNTSTUID"
+    - "W_FSTUWT"
+
+  # Data types
+  dtype_numeric: "float32"  # Memory optimization for M1
+
+  # Missing value handling
+  max_missing_pct: 0.8  # Drop columns with >80% missing
+  missing_value_strategy: "knn"  # or "mean", "median"
+  knn_neighbors: 5
+
+preprocessing:
+  # Feature selection
+  feature_selection_method: "rfe"  # Recursive Feature Elimination
+  n_features_to_select: 150
+
+  # Scaling
+  scaling_method: "standard"  # StandardScaler
+
+  # SMOTE
+  smote_enabled: true
+  smote_k_neighbors: 5
+  smote_strategy: "auto"  # or specific ratio
+
+  # Cross-validation
+  cv_strategy: "stratified_kfold"
+  n_splits: 5
+  cv_shuffle: true
+
+  # Feature columns patterns (for selection)
+  numeric_features_pattern: null  # Auto-detect
+  categorical_features_pattern: null  # Auto-detect
+
+model_training:
+  # Models to train
+  models:
+    - "logistic_regression"
+    - "random_forest"
+    - "xgboost"
+    - "lightgbm"
+
+  # Grid Search Config
+  grid_search_cv: 5
+  grid_search_scoring: "roc_auc"
+  n_jobs: -1  # All cores
+  verbose: 1
+
+  # Hyperparameters
+  hyperparameters:
+    logistic_regression:
+      C: [0.001, 0.01, 0.1, 1, 10]
+      class_weight: ["balanced", null]
+      max_iter: [1000]
+      solver: ["liblinear"]
+
+    random_forest:
+      n_estimators: [100, 200]
+      max_depth: [10, 15, 20]
+      min_samples_split: [5, 10]
+      min_samples_leaf: [2, 4]
+      class_weight: ["balanced", "balanced_subsample"]
+
+    xgboost:
+      n_estimators: [100, 200]
+      max_depth: [4, 5, 6]
+      learning_rate: [0.01, 0.05, 0.1]
+      subsample: [0.8, 1.0]
+      scale_pos_weight: "auto"  # Computed from class ratio
+
+    lightgbm:
+      n_estimators: [100, 200]
+      max_depth: [4, 5, 6]
+      learning_rate: [0.01, 0.05, 0.1]
+      num_leaves: [20, 31, 50]
+      class_weight: ["balanced"]
+
+post_training:
+  # Threshold optimization
+  threshold_optimization: true
+  threshold_metric: "f1"  # or "youden_j", "precision", "recall"
+  threshold_range: [0.0, 1.0]
+  threshold_step: 0.01
+
+  # Bootstrap analysis
+  bootstrap_enabled: true
+  bootstrap_n_iterations: 1000
+  bootstrap_ci: 95
+
+  # Calibration
+  calibration_method: "sigmoid"  # or "isotonic"
+
+  # Learning curves
+  learning_curves_enabled: true
+  learning_curves_cv: 3
+
+interpretability:
+  # SHAP Analysis
+  shap_enabled: true
+  shap_max_samples: 500  # Limit for M1 memory
+  shap_plot_type: "summary"  # or "dependence", "waterfall", "force"
+
+  # Fairness Analysis
+  fairness_enabled: true
+  fairness_protected_attrs:
+    - "ST004D01T"  # Gender
+  fairness_metrics:
+    - "equal_opportunity"
+    - "demographic_parity"
+    - "false_positive_rate"
+    - "false_negative_rate"
+    - "disparate_impact"
+
+clustering:
+  # PCA
+  pca_enabled: true
+  pca_n_components: 0.95  # Variance explained
+
+  # UMAP
+  umap_enabled: true
+  umap_n_components: 2
+  umap_n_neighbors: 15
+  umap_min_dist: 0.1
+
+  # K-Means
+  kmeans_enabled: true
+  kmeans_n_clusters_range: [2, 10]
+  kmeans_random_state: 42
+
+publication_audit:
+  # Data leakage checks
+  check_data_leakage: true
+  check_forbidden_features: true
+
+  # Overfitting checks
+  check_overfitting: true
+  overfitting_threshold: 0.15  # Max gap between train/test
+
+  # Reproducibility checks
+  check_random_state: true
+  check_seed_consistency: true
+
+  # Methodology checks
+  check_smote_application: true
+  check_cv_strategy: true
+  check_feature_selection: true
+
+  # Fairness checks
+  check_fairness_metrics: true
+
+  # Calibration checks
+  check_calibration: true
+
+reporting:
+  # Output formats
+  output_formats:
+    - "json"
+    - "csv"
+    - "markdown"
+    - "pdf"
+    - "excel"
+
+  # Report content
+  include_code_appendix: false
+  include_raw_metrics: true
+  include_visualizations: true
+
+  # PDF settings
+  pdf_page_size: "A4"
+  pdf_margin: [10, 10, 10, 10]  # top, right, bottom, left
+
+streamlit:
+  # Dashboard config
+  page_layout: "wide"
+  theme: "light"  # or "dark"
+  initial_sidebar_state: "expanded"
+
+  # Cache settings
+  cache_ttl: null  # Cache never expires
+  max_cache_size: 4  # GB for M1
+
+  # Plot settings
+  plotly_config:
+    responsive: true
+    displayModeBar: true
+
+memory_optimization:
+  # M1 8GB constraints
+  target_memory_limit: 6.5  # GB
+  dtype_float: "float32"
+  use_lazy_loading: true
+  chunk_size: 10000  # Rows per chunk if needed
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "outputs/reproducibility/pipeline.log"
