@@ -1,0 +1,72 @@
+project_name: "PISA 2022 Creative Resilience (PISA 2022 Brasil)"
+random_seed: 42
+
+data:
+  # detector de arquivo csv na pasta data/ (sem caminho fixo)
+  dataset_glob_patterns:
+    - "data/pisa*_estudo_limpo*.csv"
+    - "data/pisa*.csv"
+    - "data/*pisa*estudo*limpo*.csv"
+  primary_dataset_min_rows: 100
+
+paths:
+  config_dir: "config"
+  project_dir: "project"
+  data_dir: "data"
+  outputs_dir: "outputs"
+  models_dir: "models"
+  dashboard_dir: "dashboard"
+  src_dir: "src"
+  tests_dir: "tests"
+  docs_dir: "docs"
+
+outputs:
+  figures_dir: "outputs/figures"
+  tables_dir: "outputs/tables"
+  reports_dir: "outputs/reports"
+
+analysis:
+  target_definitions:
+    - A
+    - B
+    - C
+    - D
+  target_profile_key: A
+  leakage_severity_thresholds:
+    critical_mutual_info_ratio: 5.0
+    high_corr_abs: 0.95
+
+clustering:
+  n_clusters: 4
+  max_features: 50
+
+modeling:
+  max_features: 80
+  max_missing_ratio: 0.5
+  test_size: 0.2
+  cv_folds: 5
+
+shap:
+  max_rows: 800
+
+robustness:
+  n_bootstrap: 200
+
+fairness:
+  sensitive_feature_candidates:
+    - Sexo
+    - gender
+    - ST004D01T
+    - N_SEXO
+    - Grupo_ESCS
+    - school_type
+    - HISCED
+    - WISCED
+    - region
+    - UF
+    - Região
+
+weighted_analysis:
+  sample_weight_candidates:
+    - W_FSTUWT
+

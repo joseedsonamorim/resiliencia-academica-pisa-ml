@@ -1,0 +1,18 @@
+[project]
+name = "pisa-creative-resilience"
+version = "0.1.0"
+description = "PISA 2022 Creative Resilience pipeline"
+requires-python = ">=3.10"
+
+[tool.setuptools]
+packages = []
+
+[tool.black]
+line-length = 100
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+

@@ -1,0 +1,14 @@
+{
+  "project": "PISA 2022 Creative Resilience (PISA 2022 Brasil)",
+  "dataset": {
+    "source": "data/ (CSV autodetectado)",
+    "csv_detected": "data/pisa_brasil_estudo_limpo.csv",
+    "checksum": null,
+    "rows": null,
+    "cols": null
+  },
+  "pipeline": {
+    "seed": 42,
+    "version": "0.1.0"
+  }
+}

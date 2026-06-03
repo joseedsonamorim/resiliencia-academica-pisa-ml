@@ -1,2 +1,2 @@
-"""Resiliência Criativa PISA Analysis Pipeline."""
-__version__ = "1.0.0"
+"""PISA 2022 Creative Resilience pipeline."""
+

@@ -1,0 +1,4 @@
+{
+  "reports_count": 13,
+  "streamlit_cmd": "python3 -m streamlit run dashboard/app.py"
+}

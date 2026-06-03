@@ -1,184 +1,153 @@
-"""Resilient student profile analysis.
-
-Constraints: add complementary analysis only.
-
-Outputs:
-- outputs/reports/resilient_profile.md
-- outputs/tables/resilient_profile.csv
-- outputs/figures/resilient_profile_radar.png
-- outputs/figures/resilient_profile_heatmap.png
-"""
-
 from __future__ import annotations
 
-from typing import Dict, Any
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from src.config import get_config
-from src.utils import setup_logger
 
-logger = setup_logger(__name__)
-
-
-def _cohen_d(x1: np.ndarray, x2: np.ndarray) -> float:
-    x1 = np.asarray(x1, dtype=float)
-    x2 = np.asarray(x2, dtype=float)
-    n1, n2 = len(x1), len(x2)
-    if n1 < 2 or n2 < 2:
-        return float('nan')
-    s1 = np.var(x1, ddof=1)
-    s2 = np.var(x2, ddof=1)
-    pooled = ((n1 - 1) * s1 + (n2 - 1) * s2) / max(n1 + n2 - 2, 1)
-    sd = np.sqrt(pooled)
-    return float((np.mean(x1) - np.mean(x2)) / sd) if sd > 0 else float('nan')
+def _select_targets(df: pd.DataFrame) -> dict[str, pd.Series]:
+    # Prefer explicit target columns already present
+    targets = {}
+    for k in ["A", "B", "C", "D"]:
+        for cand in [f"target_{k}", f"Target_{k}", f"target_{k.lower()}", f"target{k}"]:
+            if cand in df.columns:
+                s = pd.to_numeric(df[cand], errors="coerce")
+                targets[k] = (s.fillna(0) > 0).astype(int)
+                break
+        if k not in targets:
+            # also allow pattern columns from target_comparison outputs
+            # (common naming in some pipelines)
+            pass
+    return targets
 
 
-def run_resilient_profile() -> Dict[str, Any]:
-    from src.data_layer import DataLoader
-    import matplotlib
-    matplotlib.use('Agg', force=True)
-    import matplotlib.pyplot as plt
+def run_resilient_profile(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
+    out_reports = Path(cfg["outputs"]["reports_dir"])
+    out_tables = Path(cfg["outputs"]["tables_dir"])
+    out_figures = Path(cfg["outputs"]["figures_dir"]) / "resilient_profile"
+    out_figures.mkdir(parents=True, exist_ok=True)
+    out_reports.mkdir(parents=True, exist_ok=True)
+    out_tables.mkdir(parents=True, exist_ok=True)
 
+    targets = _select_targets(df)
+    if not targets:
+        # fallback: if no target columns exist, try compute from target_builder parameters
+        from src.target_builder import build_target_definitions
 
-    config = get_config()
-    rs = config.get('random_state', 42)
+        targets_int, _ = build_target_definitions(df)
+        targets = {k: pd.Series(v, index=df.index) for k, v in targets_int.items()}
 
-    outputs_reports = config.get_path('outputs_reports')
-    outputs_tables = config.get_path('outputs_tables')
-    outputs_figures = config.get_path('outputs_figures')
-    outputs_reports.mkdir(parents=True, exist_ok=True)
-    outputs_tables.mkdir(parents=True, exist_ok=True)
-    outputs_figures.mkdir(parents=True, exist_ok=True)
+    # Heurística: pick one target definition to profile (A by default)
+    y_key = cfg.get("analysis", {}).get("target_profile_key", "A")
+    if y_key not in targets:
+        y_key = sorted(targets.keys())[0]
 
-    logger.info('\nRunning resilient profile analysis...')
-    loader = DataLoader(config)
-    df = loader.load_raw_data()
+    y = pd.Series(targets[y_key], index=df.index)
 
-    if 'Creative_Resilience' not in df.columns:
-        raise ValueError('Creative_Resilience column not found')
+    # features: numeric columns excluding obvious target/ids/weights
+    drop_sub = {"id", "cntstu", "stuid", "weight", "w_fstuwt", "w_", "target_", "status"}
+    feature_cols = []
+    for c in df.columns:
+        lc = c.lower()
+        if any(s in lc for s in ["target_a", "target_b", "target_c", "target_d"]):
+            continue
+        if "target_" in lc or lc.startswith("target"):
+            continue
+        if lc in drop_sub or lc.startswith("w_") or "weight" in lc:
+            continue
+        if lc.startswith("st") or "cntstu" in lc or "id" in lc:
+            continue
+        if pd.api.types.is_numeric_dtype(df[c]):
+            feature_cols.append(c)
 
-    resilient = df[df['Creative_Resilience'] == 1]
-    non_resilient = df[df['Creative_Resilience'] == 0]
+    # compare means for top N differences
+    diffs = []
+    for c in feature_cols:
+        x = pd.to_numeric(df[c], errors="coerce")
+        x_pos = x[y == 1]
+        x_neg = x[y == 0]
+        if x_pos.dropna().empty or x_neg.dropna().empty:
+            continue
+        diff = float(x_pos.mean() - x_neg.mean())
+        diffs.append((c, diff, float(x_pos.mean()), float(x_neg.mean())))
 
-    # Heuristic variable groups: use columns that exist among known names.
-    candidate_cols = [
-        # Tech / engagement-ish
-        'HOMEPOS', 'ICTRES', 'ST004D01T',
-        # Socioeconomic-ish
-        'ESCS', 'HISCED',
-        # Creativity/reading proxies (if present)
-        'CRT_SCORE',
-    ]
+    diffs.sort(key=lambda t: abs(t[1]), reverse=True)
+    top = diffs[:30]
 
-    candidate_cols = [c for c in candidate_cols if c in df.columns]
-
+    # table CSV
     rows = []
-    for col in candidate_cols:
-        x1 = resilient[col].astype(float).values
-        x0 = non_resilient[col].astype(float).values
-        rows.append({
-            'variable': col,
-            'mean_resilient': float(np.mean(x1)),
-            'median_resilient': float(np.median(x1)),
-            'std_resilient': float(np.std(x1, ddof=1)) if len(x1) > 1 else float('nan'),
-            'mean_non_resilient': float(np.mean(x0)),
-            'median_non_resilient': float(np.median(x0)),
-            'std_non_resilient': float(np.std(x0, ddof=1)) if len(x0) > 1 else float('nan'),
-            'cohen_d': _cohen_d(x1, x0),
-        })
+    for c, diff, m_pos, m_neg in top:
+        rows.append(
+            {"feature": c, "mean_resilientes": m_pos, "mean_nao_resilientes": m_neg, "diff": diff}
+        )
 
-    out_df = pd.DataFrame(rows).sort_values('cohen_d', key=lambda s: s.abs(), ascending=False)
+    out_csv = out_tables / "resilient_profile.csv"
+    pd.DataFrame(rows).to_csv(out_csv, index=False)
 
-    csv_path = outputs_tables / 'resilient_profile.csv'
-    out_df.to_csv(csv_path, index=False)
+    # radar/heatmap are best-effort
+    try:
+        import matplotlib.pyplot as plt
 
-    # Radar chart: use top 6 variables by |d|
-    topk = min(6, len(out_df))
-    radar_vars = out_df.head(topk)['variable'].tolist()
+        labels = [r["feature"] for r in rows[:10]]
+        vals = [r["diff"] for r in rows[:10]]
 
-    if topk > 1:
-        means1 = out_df.head(topk)['mean_resilient'].values
-        means0 = out_df.head(topk)['mean_non_resilient'].values
+        # normalize for radar-like plot
+        v = np.array(vals, dtype=float)
+        if np.nanmax(np.abs(v)) != 0:
+            v = v / np.nanmax(np.abs(v))
 
-        # normalize to [0,1] for visualization
-        all_means = np.concatenate([means1, means0])
-        mn, mx = np.min(all_means), np.max(all_means)
-        if mx - mn == 0:
-            m1n = means1
-            m0n = means0
-        else:
-            m1n = (means1 - mn) / (mx - mn)
-            m0n = (means0 - mn) / (mx - mn)
-
-        angles = np.linspace(0, 2 * np.pi, topk, endpoint=False).tolist()
+        angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
         angles += angles[:1]
+        v = np.concatenate([v, v[:1]])
 
-        m1n = m1n.tolist(); m0n = m0n.tolist()
-        m1n += m1n[:1]; m0n += m0n[:1]
-
-        fig, ax = plt.subplots(figsize=(8, 6), subplot_kw={'polar': True})
-        ax.plot(angles, m1n, label='Resiliente')
-        ax.fill(angles, m1n, alpha=0.25)
-        ax.plot(angles, m0n, label='Não-resiliente')
-        ax.fill(angles, m0n, alpha=0.25)
+        plt.figure(figsize=(7, 6))
+        ax = plt.subplot(111, polar=True)
+        ax.plot(angles, v)
+        ax.fill(angles, v, alpha=0.25)
         ax.set_xticks(angles[:-1])
-        ax.set_xticklabels(radar_vars, fontsize=9)
-        ax.set_title('Perfil do aluno criativamente resiliente (Radar)')
-        ax.legend(loc='upper right', bbox_to_anchor=(1.35, 1.1))
-        radar_path = outputs_figures / 'resilient_profile_radar.png'
-        fig.tight_layout()
-        fig.savefig(radar_path, dpi=200)
-        plt.close(fig)
+        ax.set_xticklabels(labels, fontsize=9)
+        ax.set_title(f"Resilient profile radar — target {y_key}")
+        plt.tight_layout()
+        plt.savefig(out_figures / "resilient_profile_radar.png", dpi=200)
+        plt.close()
+    except Exception:
+        pass
 
+    try:
+        # heatmap of means for top 20 features
+        top_feats = [r["feature"] for r in rows[:20]]
+        mat = []
+        for group_label, mask in [("resilientes", y == 1), ("nao_resilientes", y == 0)]:
+            vals = []
+            for c in top_feats:
+                vals.append(float(pd.to_numeric(df.loc[mask, c], errors="coerce").mean()))
+            mat.append(vals)
 
-    # Heatmap of cohen_d
-    fig, ax = plt.subplots(figsize=(10, 3))
-    heat_df = out_df[['variable', 'cohen_d']].head(12).set_index('variable')
-    im = ax.imshow(heat_df.values, aspect='auto', cmap='coolwarm')
-    ax.set_yticks(range(len(heat_df.index)))
-    ax.set_yticklabels(heat_df.index)
-    ax.set_xticks([0])
-    ax.set_xticklabels(['Cohen d'])
-    fig.colorbar(im, ax=ax, label='Cohen d (|d| maior = efeito maior)')
-    ax.set_title('Efeito (Cohen\'s d) — Resiliente vs Não-resiliente')
-    heat_path = outputs_figures / 'resilient_profile_heatmap.png'
-    fig.tight_layout()
-    fig.savefig(heat_path, dpi=200)
-    plt.close(fig)
+        import seaborn as sns
 
+        plt.figure(figsize=(12, 3.5))
+        sns.heatmap(pd.DataFrame(mat, index=["resilientes", "nao_resilientes"], columns=top_feats), cmap="RdBu_r", center=0)
+        plt.title(f"Resilient profile heatmap — target {y_key}")
+        plt.tight_layout()
+        plt.savefig(out_figures / "resilient_profile_heatmap.png", dpi=200)
+        plt.close()
+    except Exception:
+        pass
 
-    # Markdown interpretation
-    md_lines = [
-        '# Perfil do Aluno Criativamente Resiliente',
-        '',
-        '## Comparação Resiliente vs Não-resiliente',
-        '',
-        out_df[['variable', 'mean_resilient', 'mean_non_resilient', 'cohen_d']].head(10).to_markdown(index=False),
-        '',
-        '## Interpretação (automática, português)',
-        'Em geral, as variáveis com |Cohen\'s d| mais alto indicam diferenças mais fortes entre os grupos. Variáveis com Cohen\'s d positivo tendem a ser maiores no grupo resiliente (na escala original do dataset).',
-        '',
-        '## Outputs',
-        f'- {csv_path}',
-        f'- {radar_path if topk > 1 else "(sem radar)"}',
-        f'- {heat_path}',
-    ]
+    # markdown report
+    md = []
+    md.append(f"# Resilient profile\n\n")
+    md.append(f"- Dataset: `{csv_path.name}`\n")
+    md.append(f"- Target usada para perfil: `{y_key}`\n")
+    md.append("\n## Top diferenças (média) — resilient vs não\n\n")
+    md.append(pd.DataFrame(rows).head(25).to_markdown(index=False))
+    md.append("\n")
 
-    md_path = outputs_reports / 'resilient_profile.md'
-    md_path.write_text('\n'.join(md_lines), encoding='utf-8')
+    md.append("\n## Figuras\n\n")
+    md.append(f"- Radar: `outputs/figures/resilient_profile/resilient_profile_radar.png`\n")
+    md.append(f"- Heatmap: `outputs/figures/resilient_profile/resilient_profile_heatmap.png`\n")
 
-    logger.info(f'Resilient profile saved: {md_path}')
+    (out_reports / "resilient_profile.md").write_text("".join(md), encoding="utf-8")
 
-    return {
-        'report_path': str(md_path),
-        'csv_path': str(csv_path),
-        'radar_path': str(outputs_figures / 'resilient_profile_radar.png'),
-        'heatmap_path': str(outputs_figures / 'resilient_profile_heatmap.png'),
-    }
-
-
-if __name__ == '__main__':
-    run_resilient_profile()
 

@@ -1,151 +1,1277 @@
-#  RELATÓRIO DE AUDITORIA DO DATASET PISA BRASIL
-
-**Data da auditoria:** 2026-05-31  
-**Arquivo:** `pisa_brasil_estudo_limpo.csv`
-
----
-
-##  DIMENSÕES DO DATASET
-
-| Métrica | Valor |
-|---------|-------|
-| **Observações (Estudantes)** | 3,834 |
-| **Variáveis (Colunas)** | 1275 |
-| **Variáveis Numéricas** | 10 |
-| **Variáveis Categóricas** | 1265 |
-
----
-
-##  IDENTIFICAÇÃO DE VARIÁVEIS-CHAVE
-
-###  Variável Dependente (Target)
-- **Nome:** `Creative_Resilience`
-- **Tipo:** Binária (0/1)
-- **Posição:** Coluna 1273
-- **Status:**  JÁ EXISTE NO DATASET
-
-###  Variável de Desempenho em Criatividade
-- **Nome:** `CRT_SCORE`
-- **Tipo:** Numérica (contínua)
-- **Posição:** Coluna 1272
-- **Descrição:** Score agregado de Creative Thinking
-
-###  Variável Socioeconômica
-- **Nome:** `ESCS`
-- **Tipo:** Numérica (índice padronizado)
-- **Posição:** Coluna 1
-- **Descrição:** Índice de Status Econômico, Social e Cultural (PISA)
-
-###  Variáveis Demográficas
-- `ST004D01T` (Gênero)
-- `HISCED` (Educação parental)
-- `CNTSTUID` (ID do Estudante)
-
-###  Variáveis de Contexto
-- `HOMEPOS` (Recursos de casa)
-- `ICTRES` (Recursos de tecnologia)
-- `W_FSTUWT` (Peso amostral)
-- `Grupo_ESCS` (Quartis de ESCS)
-
-###  Variáveis de Teste de Criatividade
-- **Total:** 1265 itens/componentes
-- **Padrão:** `CR[task_code]Q[item_number][type]`
-
----
-
-##  ESTATÍSTICAS DESCRITIVAS
-
-### ESCS (Índice Socioeconômico)
-- **Mín:** -5.1083
-- **Q1 (25%):** -1.6970
-- **Mediana (50%):** -0.9422
-- **Q3 (75%):** -0.1308
-- **Máx:** 1.7973
-- **Válidos:** 3,834
-
-### CRT_SCORE (Desempenho em Creative Thinking)
-- **Mín:** 0.0725
-- **Q1 (25%):** 0.3371
-- **Mediana (50%):** 0.4167
-- **Q3 (75%):** 0.4925
-- **Máx:** 0.9545
-- **Válidos:** 3,834
-
-### Creative_Resilience (Target)
-- **0 (Não Resiliente):** 3,670 (95.72%)
-- **1 (Resiliente):** 164 (4.28%)
-
-### Status (Categorização Textual)
-- `Demais estudantes`: 3,670 (95.72%)
-- `Criativamente resiliente`: 164 (4.28%)
-
-### Grupo_ESCS (Quartis)
-- **Q1:** 959 (25.01%)
-- **Q2:** 959 (25.01%)
-- **Q3:** 958 (24.99%)
-- **Q4:** 958 (24.99%)
-
-
----
-
-##  VARIÁVEIS COM RISCO DE LEAKAGE
-
-### Análise de Leakage
-
-| Variável | Risco | Justificativa |
-|----------|-------|--------------|
-| `CRT_SCORE` |  CRÍTICO | Componente direto do target - NUNCA use |
-| `Status` |  CRÍTICO | Derivada do target - NUNCA use |
-| `Grupo_ESCS` |  ALTO | Derivada de ESCS - revisar conforme necessário |
-| `CNTSTUID` |  MÉDIO | ID único - usar só para rastreamento |
-| `W_FSTUWT` |  BAIXO | Peso amostral - usar em validação |
-
----
-
-##  VARIÁVEIS A REMOVER DO PIPELINE
-
-Não incluir no pré-processamento de features:
-- `CNTSTUID` (ID)
-- `W_FSTUWT` (Peso amostral - usar separadamente)
-- `CRT_SCORE` (Componente do target)
-- `Status` (Derivada do target)
-- `Creative_Resilience` (Target - não é feature!)
-
----
-
-##  VARIÁVEIS CANDIDATAS A FEATURES
-
-### Principais (Nível Macro)
-1. `ESCS` - Socioeconomia
-2. `HOMEPOS` - Recursos de casa
-3. `ICTRES` - Recursos tecnológicos
-4. `HISCED` - Educação parental
-5. `ST004D01T` - Gênero
-
-### Complementares
-- Todas as colunas `CR*` (itens de testes)
-
----
-
-##  DEFINIÇÃO METODOLÓGICA DO TARGET
-
-**Observação Crítica:** O dataset já possui `Creative_Resilience` construído.
-
-Para validar a metodologia usada, verificar:
-1.  Quartil Q1 de ESCS ≈ {escs_data[len(escs_data)//4]:.4f}
-2.  Quartil Q3 de CRT_SCORE ≈ {crt_data[3*len(crt_data)//4]:.4f}
-3. Contar quantos têm ESCS ≤ Q1 **E** CRT_SCORE ≥ Q3
-
-Se {target_counts.get('1', 0)} = estudantes "Criativamente resilientes", a lógica foi aplicada corretamente.
-
----
-
-##  PRÓXIMAS ETAPAS
-
-1.  Auditoria de estrutura concluída
-2.  Target validado
-3. ⏳ Exploração de distribuições e correlações
-4. ⏳ Engenharia de features
-5. ⏳ Pré-processamento e pipeline de ML
-
-*Relatório gerado em 2026-05-31*
+| nome                | tipo        |    missing |   cardinalidade | categoria_funcional          | duplicatas_totalmente_iguais   | constante   | quase_constante   |
+|:--------------------|:------------|-----------:|----------------:|:-----------------------------|:-------------------------------|:------------|:------------------|
+| CR567Q06S           | numeric     | 0.926708   |               2 | Unknown                      |                                | False       | False             |
+| CR543Q13S           | numeric     | 0.924622   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q06F           | numeric     | 0.922274   |             297 | Unknown                      |                                | False       | False             |
+| CR561Q06S           | numeric     | 0.921492   |               5 | Unknown                      |                                | False       | False             |
+| CR552Q04F           | numeric     | 0.921492   |             300 | Unknown                      |                                | False       | False             |
+| CR567Q11SF          | numeric     | 0.919405   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q11SD          | numeric     | 0.919144   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q13S           | numeric     | 0.918884   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q11SC          | numeric     | 0.918362   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q11SA          | numeric     | 0.918101   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q11S           | numeric     | 0.917319   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q08SE          | numeric     | 0.916797   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q08SD          | numeric     | 0.916797   |               2 | Unknown                      |                                | False       | False             |
+| CR568Q15S           | numeric     | 0.916275   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q08SC          | numeric     | 0.916275   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q10S           | numeric     | 0.915754   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q08SB          | numeric     | 0.915493   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q08SA          | numeric     | 0.915232   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q11F           | numeric     | 0.914189   |             326 | Unknown                      |                                | False       | False             |
+| CR541Q11F           | numeric     | 0.913928   |             327 | Unknown                      |                                | False       | False             |
+| CR561Q08S           | numeric     | 0.913406   |               2 | Unknown                      |                                | False       | False             |
+| CR544Q14SE          | numeric     | 0.913146   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q08S           | numeric     | 0.913146   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q10F           | numeric     | 0.913146   |             329 | Unknown                      |                                | False       | False             |
+| CR550Q06S           | numeric     | 0.912885   |               2 | Unknown                      |                                | False       | False             |
+| CR544Q14SC          | numeric     | 0.912885   |               2 | Unknown                      |                                | False       | False             |
+| CR544Q13F           | numeric     | 0.912885   |             333 | Unknown                      |                                | False       | False             |
+| CR544Q14SB          | numeric     | 0.912363   |               2 | Unknown                      |                                | False       | False             |
+| CR568Q15F           | numeric     | 0.912363   |             335 | Unknown                      |                                | False       | False             |
+| CR544Q14SD          | numeric     | 0.912102   |               2 | Unknown                      |                                | False       | False             |
+| CR553Q07S           | numeric     | 0.911841   |               2 | Unknown                      |                                | False       | False             |
+| CR552Q08F           | numeric     | 0.911841   |             335 | Unknown                      |                                | False       | False             |
+| CR567Q08F           | numeric     | 0.911841   |             336 | Unknown                      |                                | False       | False             |
+| CR544Q14SA          | numeric     | 0.911581   |               2 | Unknown                      |                                | False       | False             |
+| CR544Q14S           | numeric     | 0.911581   |               3 | Unknown                      |                                | False       | False             |
+| CR568Q06F           | numeric     | 0.911059   |             340 | Unknown                      |                                | False       | False             |
+| CR567Q13F           | numeric     | 0.910276   |             341 | Unknown                      |                                | False       | False             |
+| CR568Q10S           | numeric     | 0.910016   |               2 | Unknown                      |                                | False       | False             |
+| CR543Q13F           | numeric     | 0.910016   |             342 | Unknown                      |                                | False       | False             |
+| CR568Q13F           | numeric     | 0.910016   |             344 | Unknown                      |                                | False       | False             |
+| CR567Q04S           | numeric     | 0.908972   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q03F           | numeric     | 0.908972   |             348 | Unknown                      |                                | False       | False             |
+| CR544Q14F           | numeric     | 0.907929   |             346 | Unknown                      |                                | False       | False             |
+| CR567Q11VS          | numeric     | 0.907668   |               1 | Unknown                      |                                | True        | False             |
+| CR544Q12S           | numeric     | 0.907668   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q11V           | numeric     | 0.907668   |               3 | Unknown                      |                                | False       | False             |
+| CR567Q11A           | numeric     | 0.907668   |              19 | Unknown                      |                                | False       | False             |
+| CR567Q11TT          | numeric     | 0.907668   |             354 | Unknown                      |                                | False       | False             |
+| CR567Q10VS          | numeric     | 0.907407   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q10V           | numeric     | 0.907407   |               4 | Unknown                      |                                | False       | False             |
+| CR567Q10A           | numeric     | 0.907407   |              10 | Unknown                      |                                | False       | False             |
+| CR567Q10TT          | numeric     | 0.907407   |             354 | Unknown                      |                                | False       | False             |
+| CR568Q08S           | numeric     | 0.906886   |               2 | Unknown                      |                                | False       | False             |
+| CR568Q10F           | numeric     | 0.906886   |             357 | Unknown                      |                                | False       | False             |
+| CR568Q14S           | numeric     | 0.906625   |               2 | Unknown                      |                                | False       | False             |
+| CR552Q03F           | numeric     | 0.906364   |             356 | Unknown                      |                                | False       | False             |
+| CR567Q04F           | numeric     | 0.906364   |             358 | Unknown                      |                                | False       | False             |
+| CR544Q10S           | numeric     | 0.906103   |               2 | Unknown                      |                                | False       | False             |
+| CR544Q12F           | numeric     | 0.904799   |             362 | Unknown                      |                                | False       | False             |
+| CR544Q07F           | numeric     | 0.904799   |             364 | Unknown                      |                                | False       | False             |
+| CR567Q08VS          | numeric     | 0.904538   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q08V           | numeric     | 0.904538   |               3 | Unknown                      |                                | False       | False             |
+| CR567Q08A           | numeric     | 0.904538   |              22 | Unknown                      |                                | False       | False             |
+| CR567Q08TT          | numeric     | 0.904538   |             365 | Unknown                      |                                | False       | False             |
+| CR568Q08F           | numeric     | 0.904278   |             365 | Unknown                      |                                | False       | False             |
+| CR552Q06S           | numeric     | 0.904017   |               2 | Unknown                      |                                | False       | False             |
+| CR552Q08VS          | numeric     | 0.903495   |               1 | Unknown                      |                                | True        | False             |
+| CR552Q08V           | numeric     | 0.903495   |               3 | Unknown                      |                                | False       | False             |
+| CR552Q08A           | numeric     | 0.903495   |             138 | Unknown                      |                                | False       | False             |
+| CR552Q08TT          | numeric     | 0.903495   |             370 | Unknown                      |                                | False       | False             |
+| CR567Q13VS          | numeric     | 0.903234   |               1 | Unknown                      |                                | True        | False             |
+| CR567Q13V           | numeric     | 0.903234   |               4 | Unknown                      |                                | False       | False             |
+| CR567Q13A           | numeric     | 0.903234   |              19 | Unknown                      |                                | False       | False             |
+| CR102Q05F           | numeric     | 0.903234   |             366 | Unknown                      |                                | False       | False             |
+| CR544Q10F           | numeric     | 0.903234   |             367 | Unknown                      |                                | False       | False             |
+| CR567Q13TT          | numeric     | 0.903234   |             369 | Unknown                      |                                | False       | False             |
+| CR567Q06VS          | numeric     | 0.902973   |               4 | Unknown                      |                                | False       | False             |
+| CR567Q06V           | numeric     | 0.902973   |               6 | Unknown                      |                                | False       | False             |
+| CR567Q06A           | numeric     | 0.902973   |              19 | Unknown                      |                                | False       | False             |
+| CR567Q06TT          | numeric     | 0.902973   |             371 | Unknown                      |                                | False       | False             |
+| CR568Q13VS          | numeric     | 0.902713   |               1 | Unknown                      |                                | True        | False             |
+| CR552Q09S           | numeric     | 0.902713   |               2 | Unknown                      |                                | False       | False             |
+| CR552Q04VS          | numeric     | 0.902713   |               2 | Unknown                      |                                | False       | False             |
+| CR552Q04V           | numeric     | 0.902713   |               4 | Unknown                      |                                | False       | False             |
+| CR568Q13V           | numeric     | 0.902713   |               4 | Unknown                      |                                | False       | False             |
+| CR552Q04A           | numeric     | 0.902713   |             156 | Unknown                      |                                | False       | False             |
+| CR568Q13A           | numeric     | 0.902713   |             176 | Unknown                      |                                | False       | False             |
+| CR552Q04TT          | numeric     | 0.902713   |             373 | Unknown                      |                                | False       | False             |
+| CR568Q13TT          | numeric     | 0.902713   |             373 | Unknown                      |                                | False       | False             |
+| CR541Q10S           | numeric     | 0.902452   |               2 | Unknown                      |                                | False       | False             |
+| CR552Q06F           | numeric     | 0.902191   |             374 | Unknown                      |                                | False       | False             |
+| CR568Q14F           | numeric     | 0.90193    |             375 | Unknown                      |                                | False       | False             |
+| CR544Q14VS          | numeric     | 0.901408   |               1 | Unknown                      |                                | True        | False             |
+| CR544Q14V           | numeric     | 0.901408   |               2 | Unknown                      |                                | False       | False             |
+| CR544Q14A           | numeric     | 0.901408   |              20 | Unknown                      |                                | False       | False             |
+| CR544Q14TT          | numeric     | 0.901408   |             378 | Unknown                      |                                | False       | False             |
+| CR552Q01S           | numeric     | 0.901148   |               2 | Unknown                      |                                | False       | False             |
+| CR568Q10VS          | numeric     | 0.901148   |               3 | Unknown                      |                                | False       | False             |
+| CR567Q04VS          | numeric     | 0.901148   |               3 | Unknown                      |                                | False       | False             |
+| CR567Q04V           | numeric     | 0.901148   |               5 | Unknown                      |                                | False       | False             |
+| CR568Q10V           | numeric     | 0.901148   |               6 | Unknown                      |                                | False       | False             |
+| CR567Q04A           | numeric     | 0.901148   |              11 | Unknown                      |                                | False       | False             |
+| CR568Q10A           | numeric     | 0.901148   |              17 | Unknown                      |                                | False       | False             |
+| CR561Q06F           | numeric     | 0.901148   |             376 | Unknown                      |                                | False       | False             |
+| CR552Q09F           | numeric     | 0.901148   |             376 | Unknown                      |                                | False       | False             |
+| CR567Q04TT          | numeric     | 0.901148   |             377 | Unknown                      |                                | False       | False             |
+| CR568Q10TT          | numeric     | 0.901148   |             378 | Unknown                      |                                | False       | False             |
+| CR568Q05S           | numeric     | 0.900887   |               2 | Unknown                      |                                | False       | False             |
+| CR544Q06S           | numeric     | 0.900365   |               2 | Unknown                      |                                | False       | False             |
+| CR552Q01F           | numeric     | 0.900365   |             379 | Unknown                      |                                | False       | False             |
+| CR544Q04S           | numeric     | 0.900104   |               2 | Unknown                      |                                | False       | False             |
+| CR558Q09S           | numeric     | 0.899844   |               2 | Unknown                      |                                | False       | False             |
+| CR568Q08VS          | numeric     | 0.899844   |               2 | Unknown                      |                                | False       | False             |
+| CR568Q08V           | numeric     | 0.899844   |               5 | Unknown                      |                                | False       | False             |
+| CR568Q08A           | numeric     | 0.899844   |              12 | Unknown                      |                                | False       | False             |
+| CR541Q10F           | numeric     | 0.899844   |             379 | Unknown                      |                                | False       | False             |
+| CR568Q08TT          | numeric     | 0.899844   |             384 | Unknown                      |                                | False       | False             |
+| CR544Q13VS          | numeric     | 0.899322   |               2 | Unknown                      |                                | False       | False             |
+| CR544Q13V           | numeric     | 0.899322   |               4 | Unknown                      |                                | False       | False             |
+| CR544Q13A           | numeric     | 0.899322   |             136 | Unknown                      |                                | False       | False             |
+| CR544Q06F           | numeric     | 0.899322   |             385 | Unknown                      |                                | False       | False             |
+| CR544Q13TT          | numeric     | 0.899322   |             386 | Unknown                      |                                | False       | False             |
+| CR567Q03VS          | numeric     | 0.899061   |               2 | Unknown                      |                                | False       | False             |
+| CR102Q07S           | numeric     | 0.899061   |               2 | Unknown                      |                                | False       | False             |
+| CR567Q03V           | numeric     | 0.899061   |               3 | Unknown                      |                                | False       | False             |
+| CR567Q03A           | numeric     | 0.899061   |             176 | Unknown                      |                                | False       | False             |
+| CR567Q03TT          | numeric     | 0.899061   |             387 | Unknown                      |                                | False       | False             |
+| CR553Q07F           | numeric     | 0.8988     |             388 | Unknown                      |                                | False       | False             |
+| CR541Q09F           | numeric     | 0.898539   |             382 | Unknown                      |                                | False       | False             |
+| CR544Q04F           | numeric     | 0.898539   |             387 | Unknown                      |                                | False       | False             |
+| CR544Q12VS          | numeric     | 0.898279   |               3 | Unknown                      |                                | False       | False             |
+| CR544Q12V           | numeric     | 0.898279   |               5 | Unknown                      |                                | False       | False             |
+| CR544Q12A           | numeric     | 0.898279   |              20 | Unknown                      |                                | False       | False             |
+| CR544Q12TT          | numeric     | 0.898279   |             389 | Unknown                      |                                | False       | False             |
+| CR568Q15VS          | numeric     | 0.897757   |               2 | Unknown                      |                                | False       | False             |
+| CR541Q05S           | numeric     | 0.897757   |               2 | Unknown                      |                                | False       | False             |
+| CR568Q15V           | numeric     | 0.897757   |               4 | Unknown                      |                                | False       | False             |
+| CR568Q15A           | numeric     | 0.897757   |              15 | Unknown                      |                                | False       | False             |
+| CR561Q08F           | numeric     | 0.897757   |             390 | Unknown                      |                                | False       | False             |
+| CR568Q15TT          | numeric     | 0.897757   |             390 | Unknown                      |                                | False       | False             |
+| CR568Q05F           | numeric     | 0.897757   |             392 | Unknown                      |                                | False       | False             |
+| CR552Q03VS          | numeric     | 0.897496   |               3 | Unknown                      |                                | False       | False             |
+| CR552Q03V           | numeric     | 0.897496   |               5 | Unknown                      |                                | False       | False             |
+| CR552Q03A           | numeric     | 0.897496   |             160 | Unknown                      |                                | False       | False             |
+| CR552Q03TT          | numeric     | 0.897496   |             393 | Unknown                      |                                | False       | False             |
+| CR544Q10VS          | numeric     | 0.897235   |               2 | Unknown                      |                                | False       | False             |
+| CR544Q10V           | numeric     | 0.897235   |               5 | Unknown                      |                                | False       | False             |
+| CR544Q10A           | numeric     | 0.897235   |              17 | Unknown                      |                                | False       | False             |
+| CR544Q10TT          | numeric     | 0.897235   |             394 | Unknown                      |                                | False       | False             |
+| CR102Q04F           | numeric     | 0.896974   |             394 | Unknown                      |                                | False       | False             |
+| CR568Q06VS          | numeric     | 0.896453   |               2 | Unknown                      |                                | False       | False             |
+| CR568Q06V           | numeric     | 0.896453   |               4 | Unknown                      |                                | False       | False             |
+| CR568Q06A           | numeric     | 0.896453   |             173 | Unknown                      |                                | False       | False             |
+| CR568Q06TT          | numeric     | 0.896453   |             396 | Unknown                      |                                | False       | False             |
+| CR562Q05S           | numeric     | 0.896192   |               2 | Unknown                      |                                | False       | False             |
+| CR552Q06VS          | numeric     | 0.896192   |               3 | Unknown                      |                                | False       | False             |
+| CR552Q06V           | numeric     | 0.896192   |               4 | Unknown                      |                                | False       | False             |
+| CR552Q06A           | numeric     | 0.896192   |              17 | Unknown                      |                                | False       | False             |
+| CR552Q06TT          | numeric     | 0.896192   |             395 | Unknown                      |                                | False       | False             |
+| CR544Q07VS          | numeric     | 0.895931   |               3 | Unknown                      |                                | False       | False             |
+| CR544Q07V           | numeric     | 0.895931   |               6 | Unknown                      |                                | False       | False             |
+| CR544Q07A           | numeric     | 0.895931   |             156 | Unknown                      |                                | False       | False             |
+| CR544Q07TT          | numeric     | 0.895931   |             399 | Unknown                      |                                | False       | False             |
+| CR552Q09VS          | numeric     | 0.895149   |               3 | Unknown                      |                                | False       | False             |
+| CR552Q09V           | numeric     | 0.895149   |               5 | Unknown                      |                                | False       | False             |
+| CR552Q09A           | numeric     | 0.895149   |              16 | Unknown                      |                                | False       | False             |
+| CR550Q06F           | numeric     | 0.895149   |             398 | Unknown                      |                                | False       | False             |
+| CR552Q09TT          | numeric     | 0.895149   |             400 | Unknown                      |                                | False       | False             |
+| CR547Q10S           | numeric     | 0.894888   |               2 | Unknown                      |                                | False       | False             |
+| CR552Q01VS          | numeric     | 0.894888   |               2 | Unknown                      |                                | False       | False             |
+| CR552Q01V           | numeric     | 0.894888   |               4 | Unknown                      |                                | False       | False             |
+| CR544Q06VS          | numeric     | 0.894888   |               4 | Unknown                      |                                | False       | False             |
+| CR544Q06V           | numeric     | 0.894888   |               5 | Unknown                      |                                | False       | False             |
+| CR544Q06A           | numeric     | 0.894888   |              15 | Unknown                      |                                | False       | False             |
+| CR552Q01A           | numeric     | 0.894888   |              21 | Unknown                      |                                | False       | False             |
+| CR544Q06TT          | numeric     | 0.894888   |             397 | Unknown                      |                                | False       | False             |
+| CR558Q09F           | numeric     | 0.894888   |             401 | Unknown                      |                                | False       | False             |
+| CR541Q05F           | numeric     | 0.894888   |             402 | Unknown                      |                                | False       | False             |
+| CR552Q01TT          | numeric     | 0.894888   |             403 | Unknown                      |                                | False       | False             |
+| CR568Q05V           | numeric     | 0.894105   |               3 | Unknown                      |                                | False       | False             |
+| CR568Q05VS          | numeric     | 0.894105   |               3 | Unknown                      |                                | False       | False             |
+| CR568Q05A           | numeric     | 0.894105   |              14 | Unknown                      |                                | False       | False             |
+| CR568Q05TT          | numeric     | 0.894105   |             406 | Unknown                      |                                | False       | False             |
+| CR466Q06S           | numeric     | 0.893584   |               2 | Unknown                      |                                | False       | False             |
+| CR544Q04VS          | numeric     | 0.893584   |               3 | Unknown                      |                                | False       | False             |
+| CR544Q04V           | numeric     | 0.893584   |               5 | Unknown                      |                                | False       | False             |
+| CR544Q04A           | numeric     | 0.893584   |              20 | Unknown                      |                                | False       | False             |
+| CR102Q07F           | numeric     | 0.893584   |             400 | Unknown                      |                                | False       | False             |
+| CR544Q04TT          | numeric     | 0.893584   |             408 | Unknown                      |                                | False       | False             |
+| CR568Q14VS          | numeric     | 0.893062   |               1 | Unknown                      |                                | True        | False             |
+| CR568Q14V           | numeric     | 0.893062   |               3 | Unknown                      |                                | False       | False             |
+| CR568Q14A           | numeric     | 0.893062   |              19 | Unknown                      |                                | False       | False             |
+| CR568Q14TT          | numeric     | 0.893062   |             407 | Unknown                      |                                | False       | False             |
+| CR541Q11VS          | numeric     | 0.892801   |               1 | Unknown                      |                                | True        | False             |
+| CR541Q11V           | numeric     | 0.892801   |               4 | Unknown                      |                                | False       | False             |
+| CR541Q11A           | numeric     | 0.892801   |             192 | Unknown                      |                                | False       | False             |
+| CR541Q11TT          | numeric     | 0.892801   |             409 | Unknown                      |                                | False       | False             |
+| CR541Q04F           | numeric     | 0.892019   |             412 | Unknown                      |                                | False       | False             |
+| CR541Q10VS          | numeric     | 0.890715   |               4 | Unknown                      |                                | False       | False             |
+| CR541Q10V           | numeric     | 0.890715   |               6 | Unknown                      |                                | False       | False             |
+| CR541Q10A           | numeric     | 0.890715   |              16 | Unknown                      |                                | False       | False             |
+| CR541Q10TT          | numeric     | 0.890715   |             418 | Unknown                      |                                | False       | False             |
+| CR541Q03S           | numeric     | 0.890193   |               2 | Unknown                      |                                | False       | False             |
+| CR541Q09VS          | numeric     | 0.889671   |               5 | Unknown                      |                                | False       | False             |
+| CR541Q09V           | numeric     | 0.889671   |               6 | Unknown                      |                                | False       | False             |
+| CR541Q09A           | numeric     | 0.889671   |             160 | Unknown                      |                                | False       | False             |
+| CR541Q09TT          | numeric     | 0.889671   |             422 | Unknown                      |                                | False       | False             |
+| CR541Q01S           | numeric     | 0.889411   |               2 | Unknown                      |                                | False       | False             |
+| CR466Q03S           | numeric     | 0.88915    |               2 | Unknown                      |                                | False       | False             |
+| CR404Q10F           | numeric     | 0.88915    |             421 | Unknown                      |                                | False       | False             |
+| CR547Q10F           | numeric     | 0.88915    |             425 | Unknown                      |                                | False       | False             |
+| CR432Q06S           | numeric     | 0.888628   |               2 | Unknown                      |                                | False       | False             |
+| CR466Q06F           | numeric     | 0.888628   |             422 | Unknown                      |                                | False       | False             |
+| CR541Q03F           | numeric     | 0.888106   |             425 | Unknown                      |                                | False       | False             |
+| CR556Q09F           | numeric     | 0.887846   |             423 | Unknown                      |                                | False       | False             |
+| CR541Q05VS          | numeric     | 0.887324   |               4 | Unknown                      |                                | False       | False             |
+| CR541Q05V           | numeric     | 0.887324   |               6 | Unknown                      |                                | False       | False             |
+| CR541Q05A           | numeric     | 0.887324   |              19 | Unknown                      |                                | False       | False             |
+| CR541Q05TT          | numeric     | 0.887324   |             431 | Unknown                      |                                | False       | False             |
+| CR102Q07VS          | numeric     | 0.886802   |               1 | Unknown                      |                                | True        | False             |
+| CR102Q07V           | numeric     | 0.886802   |               2 | Unknown                      |                                | False       | False             |
+| CR102Q07A           | numeric     | 0.886802   |              14 | Unknown                      |                                | False       | False             |
+| CR102Q07TT          | numeric     | 0.886802   |             432 | Unknown                      |                                | False       | False             |
+| CR466Q03F           | numeric     | 0.886541   |             432 | Unknown                      |                                | False       | False             |
+| CR541Q01F           | numeric     | 0.88602    |             436 | Unknown                      |                                | False       | False             |
+| CR547Q09F           | numeric     | 0.885759   |             438 | Unknown                      |                                | False       | False             |
+| CR102Q05VS          | numeric     | 0.885498   |               2 | Unknown                      |                                | False       | False             |
+| CR102Q05V           | numeric     | 0.885498   |               3 | Unknown                      |                                | False       | False             |
+| CR102Q05A           | numeric     | 0.885498   |              68 | Unknown                      |                                | False       | False             |
+| CR102Q05TT          | numeric     | 0.885498   |             437 | Unknown                      |                                | False       | False             |
+| CR466Q02F           | numeric     | 0.884455   |             443 | Unknown                      |                                | False       | False             |
+| CR541Q04VS          | numeric     | 0.884194   |               3 | Unknown                      |                                | False       | False             |
+| CR541Q04V           | numeric     | 0.884194   |               5 | Unknown                      |                                | False       | False             |
+| CR541Q04A           | numeric     | 0.884194   |             161 | Unknown                      |                                | False       | False             |
+| CR541Q04TT          | numeric     | 0.884194   |             444 | Unknown                      |                                | False       | False             |
+| CR562Q05F           | numeric     | 0.883933   |             444 | Unknown                      |                                | False       | False             |
+| CR547Q07SE          | numeric     | 0.883672   |               2 | Unknown                      |                                | False       | False             |
+| CR549Q13SC          | numeric     | 0.883672   |               2 | Unknown                      |                                | False       | False             |
+| CR541Q03V           | numeric     | 0.883672   |               4 | Unknown                      |                                | False       | False             |
+| CR541Q03VS          | numeric     | 0.883672   |               4 | Unknown                      |                                | False       | False             |
+| CR541Q03A           | numeric     | 0.883672   |              18 | Unknown                      |                                | False       | False             |
+| CR432Q05F           | numeric     | 0.883672   |             442 | Unknown                      |                                | False       | False             |
+| CR432Q01F           | numeric     | 0.883672   |             445 | Unknown                      |                                | False       | False             |
+| CR541Q03TT          | numeric     | 0.883672   |             446 | Unknown                      |                                | False       | False             |
+| CR549Q13SD          | numeric     | 0.883412   |               2 | Unknown                      |                                | False       | False             |
+| CR547Q07SF          | numeric     | 0.88289    |               2 | Unknown                      |                                | False       | False             |
+| CR111Q02BF          | numeric     | 0.88289    |             447 | Unknown                      |                                | False       | False             |
+| CR432Q06F           | numeric     | 0.882629   |             445 | Unknown                      |                                | False       | False             |
+| CR404Q07S           | numeric     | 0.882368   |               2 | Unknown                      |                                | False       | False             |
+| CR547Q07SD          | numeric     | 0.882107   |               2 | Unknown                      |                                | False       | False             |
+| CR547Q07SB          | numeric     | 0.881847   |               2 | Unknown                      |                                | False       | False             |
+| CR102Q04VS          | numeric     | 0.881847   |               2 | Unknown                      |                                | False       | False             |
+| CR102Q04V           | numeric     | 0.881847   |               4 | Unknown                      |                                | False       | False             |
+| CR102Q04A           | numeric     | 0.881847   |             151 | Unknown                      |                                | False       | False             |
+| CR549Q05F           | numeric     | 0.881847   |             446 | Unknown                      |                                | False       | False             |
+| CR102Q04TT          | numeric     | 0.881847   |             451 | Unknown                      |                                | False       | False             |
+| CR547Q07SC          | numeric     | 0.881586   |               2 | Unknown                      |                                | False       | False             |
+| CR549Q13SB          | numeric     | 0.881586   |               2 | Unknown                      |                                | False       | False             |
+| CR549Q12SA          | numeric     | 0.881586   |               2 | Unknown                      |                                | False       | False             |
+| CR549Q12SD          | numeric     | 0.881586   |               2 | Unknown                      |                                | False       | False             |
+| CR404Q03S           | numeric     | 0.881325   |               2 | Unknown                      |                                | False       | False             |
+| CR549Q13S           | numeric     | 0.881325   |               2 | Unknown                      |                                | False       | False             |
+| CR541Q01V           | numeric     | 0.881325   |               3 | Unknown                      |                                | False       | False             |
+| CR541Q01VS          | numeric     | 0.881325   |               3 | Unknown                      |                                | False       | False             |
+| CR541Q01A           | numeric     | 0.881325   |              23 | Unknown                      |                                | False       | False             |
+| CR404Q07F           | numeric     | 0.881325   |             449 | Unknown                      |                                | False       | False             |
+| CR541Q01TT          | numeric     | 0.881325   |             453 | Unknown                      |                                | False       | False             |
+| CR547Q07SA          | numeric     | 0.881064   |               2 | Unknown                      |                                | False       | False             |
+| CR404Q06S           | numeric     | 0.880803   |               2 | Unknown                      |                                | False       | False             |
+| CR549Q12SB          | numeric     | 0.880803   |               2 | Unknown                      |                                | False       | False             |
+| CR466Q06VS          | numeric     | 0.880543   |               1 | Unknown                      |                                | True        | False             |
+| CR466Q06V           | numeric     | 0.880543   |               3 | Unknown                      |                                | False       | False             |
+| CR466Q06A           | numeric     | 0.880543   |              32 | Unknown                      |                                | False       | False             |
+| CR558Q04F           | numeric     | 0.880543   |             453 | Unknown                      |                                | False       | False             |
+| CR466Q06TT          | numeric     | 0.880543   |             457 | Unknown                      |                                | False       | False             |
+| CR404Q03F           | numeric     | 0.880282   |             459 | Unknown                      |                                | False       | False             |
+| CR547Q06S           | numeric     | 0.880021   |               2 | Unknown                      |                                | False       | False             |
+| CR549Q12S           | numeric     | 0.880021   |               2 | Unknown                      |                                | False       | False             |
+| CR404Q06F           | numeric     | 0.87976    |             457 | Unknown                      |                                | False       | False             |
+| CR550Q07F           | numeric     | 0.87976    |             457 | Unknown                      |                                | False       | False             |
+| CR547Q07F           | numeric     | 0.87976    |             459 | Unknown                      |                                | False       | False             |
+| CR547Q06F           | numeric     | 0.879499   |             456 | Unknown                      |                                | False       | False             |
+| CR404Q10VS          | numeric     | 0.878978   |               2 | Unknown                      |                                | False       | True              |
+| CR549Q10S           | numeric     | 0.878978   |               2 | Unknown                      |                                | False       | False             |
+| CR404Q10V           | numeric     | 0.878978   |               4 | Unknown                      |                                | False       | False             |
+| CR404Q10A           | numeric     | 0.878978   |             235 | Unknown                      |                                | False       | False             |
+| CR549Q13F           | numeric     | 0.878978   |             460 | Unknown                      |                                | False       | False             |
+| CR404Q10TT          | numeric     | 0.878978   |             462 | Unknown                      |                                | False       | False             |
+| CR558Q10SB          | numeric     | 0.878717   |               2 | Unknown                      |                                | False       | False             |
+| CR549Q12F           | numeric     | 0.878717   |             461 | Unknown                      |                                | False       | False             |
+| CR547Q03S           | numeric     | 0.878456   |               2 | Unknown                      |                                | False       | False             |
+| CR558Q10SC          | numeric     | 0.878456   |               2 | Unknown                      |                                | False       | False             |
+| CR558Q10SD          | numeric     | 0.878456   |               2 | Unknown                      |                                | False       | False             |
+| CR549Q06S           | numeric     | 0.878456   |               2 | Unknown                      |                                | False       | False             |
+| CR466Q03VS          | numeric     | 0.878456   |               2 | Unknown                      |                                | False       | False             |
+| CR404Q07VS          | numeric     | 0.878456   |               3 | Unknown                      |                                | False       | False             |
+| CR466Q03V           | numeric     | 0.878456   |               4 | Unknown                      |                                | False       | False             |
+| CR404Q07V           | numeric     | 0.878456   |               6 | Unknown                      |                                | False       | False             |
+| CR404Q07A           | numeric     | 0.878456   |              20 | Unknown                      |                                | False       | False             |
+| CR466Q03A           | numeric     | 0.878456   |              20 | Unknown                      |                                | False       | False             |
+| CR549Q10F           | numeric     | 0.878456   |             463 | Unknown                      |                                | False       | False             |
+| CR404Q07TT          | numeric     | 0.878456   |             465 | Unknown                      |                                | False       | False             |
+| CR466Q03TT          | numeric     | 0.878456   |             466 | Unknown                      |                                | False       | False             |
+| CR547Q02S           | numeric     | 0.877673   |               2 | Unknown                      |                                | False       | False             |
+| CR558Q10SA          | numeric     | 0.877673   |               2 | Unknown                      |                                | False       | False             |
+| CR558Q10S           | numeric     | 0.877673   |               3 | Unknown                      |                                | False       | False             |
+| CR404Q06VS          | numeric     | 0.877673   |               4 | Unknown                      |                                | False       | False             |
+| CR404Q06V           | numeric     | 0.877673   |               6 | Unknown                      |                                | False       | False             |
+| CR404Q06A           | numeric     | 0.877673   |              17 | Unknown                      |                                | False       | False             |
+| CR404Q06TT          | numeric     | 0.877673   |             469 | Unknown                      |                                | False       | False             |
+| CR432Q06VS          | numeric     | 0.877413   |               1 | Unknown                      |                                | True        | False             |
+| CR404Q03VS          | numeric     | 0.877413   |               3 | Unknown                      |                                | False       | False             |
+| CR432Q06V           | numeric     | 0.877413   |               3 | Unknown                      |                                | False       | False             |
+| CR404Q03V           | numeric     | 0.877413   |               6 | Unknown                      |                                | False       | False             |
+| CR404Q03A           | numeric     | 0.877413   |              22 | Unknown                      |                                | False       | False             |
+| CR432Q06A           | numeric     | 0.877413   |              32 | Unknown                      |                                | False       | False             |
+| CR432Q06TT          | numeric     | 0.877413   |             468 | Unknown                      |                                | False       | False             |
+| CR549Q06F           | numeric     | 0.877413   |             469 | Unknown                      |                                | False       | False             |
+| CR404Q03TT          | numeric     | 0.877413   |             470 | Unknown                      |                                | False       | False             |
+| CR111Q06F           | numeric     | 0.877152   |             467 | Unknown                      |                                | False       | False             |
+| CR547Q03F           | numeric     | 0.877152   |             470 | Unknown                      |                                | False       | False             |
+| CR547Q10VS          | numeric     | 0.876891   |               1 | Unknown                      |                                | True        | False             |
+| CR547Q10V           | numeric     | 0.876891   |               3 | Unknown                      |                                | False       | False             |
+| CR547Q10A           | numeric     | 0.876891   |              43 | Unknown                      |                                | False       | False             |
+| CR558Q12F           | numeric     | 0.876891   |             469 | Unknown                      |                                | False       | False             |
+| CR547Q10TT          | numeric     | 0.876891   |             471 | Unknown                      |                                | False       | False             |
+| CR565Q05F           | numeric     | 0.87663    |             466 | Unknown                      |                                | False       | False             |
+| CR558Q10F           | numeric     | 0.87663    |             469 | Unknown                      |                                | False       | False             |
+| CR547Q02F           | numeric     | 0.87663    |             471 | Unknown                      |                                | False       | False             |
+| CR558Q06S           | numeric     | 0.876369   |               2 | Unknown                      |                                | False       | False             |
+| CR432Q05VS          | numeric     | 0.876109   |               2 | Unknown                      |                                | False       | False             |
+| CR547Q09VS          | numeric     | 0.876109   |               4 | Unknown                      |                                | False       | False             |
+| CR547Q09V           | numeric     | 0.876109   |               5 | Unknown                      |                                | False       | False             |
+| CR432Q05V           | numeric     | 0.876109   |               5 | Unknown                      |                                | False       | False             |
+| CR547Q09A           | numeric     | 0.876109   |             129 | Unknown                      |                                | False       | False             |
+| CR432Q05A           | numeric     | 0.876109   |             165 | Unknown                      |                                | False       | False             |
+| CR547Q09TT          | numeric     | 0.876109   |             473 | Unknown                      |                                | False       | False             |
+| CR432Q05TT          | numeric     | 0.876109   |             473 | Unknown                      |                                | False       | False             |
+| CR547Q07VS          | numeric     | 0.875587   |               2 | Unknown                      |                                | False       | False             |
+| CR547Q07V           | numeric     | 0.875587   |               5 | Unknown                      |                                | False       | False             |
+| CR547Q07A           | numeric     | 0.875587   |              34 | Unknown                      |                                | False       | False             |
+| CR547Q07TT          | numeric     | 0.875587   |             477 | Unknown                      |                                | False       | False             |
+| CR558Q06F           | numeric     | 0.875587   |             477 | Unknown                      |                                | False       | False             |
+| CR549Q04S           | numeric     | 0.875065   |               2 | Unknown                      |                                | False       | False             |
+| CR563Q12F           | numeric     | 0.875065   |             471 | Unknown                      |                                | False       | False             |
+| CR549Q13VS          | numeric     | 0.874804   |               1 | Unknown                      |                                | True        | False             |
+| CR549Q13V           | numeric     | 0.874804   |               2 | Unknown                      |                                | False       | False             |
+| CR547Q06VS          | numeric     | 0.874804   |               3 | Unknown                      |                                | False       | False             |
+| CR547Q06V           | numeric     | 0.874804   |               7 | Unknown                      |                                | False       | False             |
+| CR549Q13A           | numeric     | 0.874804   |              17 | Unknown                      |                                | False       | False             |
+| CR547Q06A           | numeric     | 0.874804   |              20 | Unknown                      |                                | False       | False             |
+| CR549Q13TT          | numeric     | 0.874804   |             476 | Unknown                      |                                | False       | False             |
+| CR547Q06TT          | numeric     | 0.874804   |             480 | Unknown                      |                                | False       | False             |
+| CR466Q02VS          | numeric     | 0.874544   |               2 | Unknown                      |                                | False       | True              |
+| CR466Q02V           | numeric     | 0.874544   |               4 | Unknown                      |                                | False       | False             |
+| CR466Q02A           | numeric     | 0.874544   |             227 | Unknown                      |                                | False       | False             |
+| CR466Q02TT          | numeric     | 0.874544   |             481 | Unknown                      |                                | False       | False             |
+| CR549Q12VS          | numeric     | 0.874022   |               2 | Unknown                      |                                | False       | False             |
+| CR432Q01VS          | numeric     | 0.874022   |               2 | Unknown                      |                                | False       | True              |
+| CR547Q03VS          | numeric     | 0.874022   |               3 | Unknown                      |                                | False       | False             |
+| CR432Q01V           | numeric     | 0.874022   |               3 | Unknown                      |                                | False       | False             |
+| CR547Q03V           | numeric     | 0.874022   |               4 | Unknown                      |                                | False       | False             |
+| CR549Q12V           | numeric     | 0.874022   |               4 | Unknown                      |                                | False       | False             |
+| CR547Q03A           | numeric     | 0.874022   |              14 | Unknown                      |                                | False       | False             |
+| CR549Q12A           | numeric     | 0.874022   |              18 | Unknown                      |                                | False       | False             |
+| CR432Q01A           | numeric     | 0.874022   |              48 | Unknown                      |                                | False       | False             |
+| CR565Q02F           | numeric     | 0.874022   |             478 | Unknown                      |                                | False       | False             |
+| CR432Q01TT          | numeric     | 0.874022   |             482 | Unknown                      |                                | False       | False             |
+| CR547Q03TT          | numeric     | 0.874022   |             483 | Unknown                      |                                | False       | False             |
+| CR549Q12TT          | numeric     | 0.874022   |             483 | Unknown                      |                                | False       | False             |
+| CR558Q12VS          | numeric     | 0.873761   |               1 | Unknown                      |                                | True        | False             |
+| CR558Q02SA          | numeric     | 0.873761   |               2 | Unknown                      |                                | False       | False             |
+| CR558Q12V           | numeric     | 0.873761   |               3 | Unknown                      |                                | False       | False             |
+| CR558Q12A           | numeric     | 0.873761   |             222 | Unknown                      |                                | False       | False             |
+| CR558Q12TT          | numeric     | 0.873761   |             484 | Unknown                      |                                | False       | False             |
+| CR558Q02SB          | numeric     | 0.8735     |               2 | Unknown                      |                                | False       | False             |
+| CR558Q02SC          | numeric     | 0.8735     |               2 | Unknown                      |                                | False       | False             |
+| CR549Q10VS          | numeric     | 0.8735     |               2 | Unknown                      |                                | False       | False             |
+| CR549Q10V           | numeric     | 0.8735     |               5 | Unknown                      |                                | False       | False             |
+| CR549Q10A           | numeric     | 0.8735     |              17 | Unknown                      |                                | False       | False             |
+| CR549Q10TT          | numeric     | 0.8735     |             483 | Unknown                      |                                | False       | False             |
+| CR547Q02VS          | numeric     | 0.873239   |               2 | Unknown                      |                                | False       | False             |
+| CR558Q02S           | numeric     | 0.873239   |               2 | Unknown                      |                                | False       | False             |
+| CR111Q01S           | numeric     | 0.873239   |               2 | Unknown                      |                                | False       | False             |
+| CR549Q06VS          | numeric     | 0.873239   |               3 | Unknown                      |                                | False       | False             |
+| CR547Q02V           | numeric     | 0.873239   |               4 | Unknown                      |                                | False       | False             |
+| CR549Q06V           | numeric     | 0.873239   |               4 | Unknown                      |                                | False       | False             |
+| CR549Q06A           | numeric     | 0.873239   |              18 | Unknown                      |                                | False       | False             |
+| CR547Q02A           | numeric     | 0.873239   |              20 | Unknown                      |                                | False       | False             |
+| CR566Q03F           | numeric     | 0.873239   |             482 | Unknown                      |                                | False       | False             |
+| CR547Q02TT          | numeric     | 0.873239   |             484 | Unknown                      |                                | False       | False             |
+| CR549Q04F           | numeric     | 0.873239   |             485 | Unknown                      |                                | False       | False             |
+| CR549Q06TT          | numeric     | 0.873239   |             486 | Unknown                      |                                | False       | False             |
+| CR558Q10VS          | numeric     | 0.872718   |               3 | Unknown                      |                                | False       | False             |
+| CR558Q10V           | numeric     | 0.872718   |               5 | Unknown                      |                                | False       | False             |
+| CR558Q10A           | numeric     | 0.872718   |              23 | Unknown                      |                                | False       | False             |
+| CR558Q10TT          | numeric     | 0.872718   |             487 | Unknown                      |                                | False       | False             |
+| CR111Q01F           | numeric     | 0.872457   |             487 | Unknown                      |                                | False       | False             |
+| CR558Q09VS          | numeric     | 0.872196   |               3 | Unknown                      |                                | False       | False             |
+| CR558Q09V           | numeric     | 0.872196   |               6 | Unknown                      |                                | False       | False             |
+| CR558Q09A           | numeric     | 0.872196   |              28 | Unknown                      |                                | False       | False             |
+| CR558Q09TT          | numeric     | 0.872196   |             489 | Unknown                      |                                | False       | False             |
+| CR558Q02F           | numeric     | 0.871935   |             491 | Unknown                      |                                | False       | False             |
+| CR111Q06VS          | numeric     | 0.871414   |               1 | Unknown                      |                                | True        | False             |
+| CR558Q06VS          | numeric     | 0.871414   |               3 | Unknown                      |                                | False       | False             |
+| CR111Q06V           | numeric     | 0.871414   |               3 | Unknown                      |                                | False       | False             |
+| CR558Q06V           | numeric     | 0.871414   |               6 | Unknown                      |                                | False       | False             |
+| CR558Q06A           | numeric     | 0.871414   |              14 | Unknown                      |                                | False       | False             |
+| CR111Q06A           | numeric     | 0.871414   |             212 | Unknown                      |                                | False       | False             |
+| CR558Q06TT          | numeric     | 0.871414   |             492 | Unknown                      |                                | False       | False             |
+| CR111Q06TT          | numeric     | 0.871414   |             493 | Unknown                      |                                | False       | False             |
+| CR562Q06F           | numeric     | 0.871153   |             491 | Unknown                      |                                | False       | False             |
+| CR549Q05VS          | numeric     | 0.870631   |               3 | Unknown                      |                                | False       | False             |
+| CR549Q05V           | numeric     | 0.870631   |               5 | Unknown                      |                                | False       | False             |
+| CR549Q05A           | numeric     | 0.870631   |             210 | Unknown                      |                                | False       | False             |
+| CR549Q05TT          | numeric     | 0.870631   |             496 | Unknown                      |                                | False       | False             |
+| CR055Q05F           | numeric     | 0.87037    |             492 | Unknown                      |                                | False       | False             |
+| CR558Q04VS          | numeric     | 0.869849   |               2 | Unknown                      |                                | False       | False             |
+| CR550Q05S           | numeric     | 0.869849   |               2 | Unknown                      |                                | False       | False             |
+| CR558Q04V           | numeric     | 0.869849   |               5 | Unknown                      |                                | False       | False             |
+| CR558Q04A           | numeric     | 0.869849   |             206 | Unknown                      |                                | False       | False             |
+| CR558Q04TT          | numeric     | 0.869849   |             498 | Unknown                      |                                | False       | False             |
+| CR550Q04S           | numeric     | 0.869588   |               2 | Unknown                      |                                | False       | False             |
+| CR549Q04VS          | numeric     | 0.869327   |               2 | Unknown                      |                                | False       | False             |
+| CR111Q02BVS         | numeric     | 0.869327   |               3 | Unknown                      |                                | False       | False             |
+| CR549Q04V           | numeric     | 0.869327   |               4 | Unknown                      |                                | False       | False             |
+| CR111Q02BV          | numeric     | 0.869327   |               5 | Unknown                      |                                | False       | False             |
+| CR549Q04A           | numeric     | 0.869327   |              23 | Unknown                      |                                | False       | False             |
+| CR111Q02BA          | numeric     | 0.869327   |             232 | Unknown                      |                                | False       | False             |
+| CR219Q02F           | numeric     | 0.869327   |             492 | Unknown                      |                                | False       | False             |
+| CR055Q02F           | numeric     | 0.869327   |             498 | Unknown                      |                                | False       | False             |
+| CR111Q02BTT         | numeric     | 0.869327   |             500 | Unknown                      |                                | False       | False             |
+| CR549Q04TT          | numeric     | 0.869327   |             501 | Unknown                      |                                | False       | False             |
+| CR558Q02VS          | numeric     | 0.869066   |               2 | Unknown                      |                                | False       | False             |
+| CR558Q02V           | numeric     | 0.869066   |               4 | Unknown                      |                                | False       | False             |
+| CR558Q02A           | numeric     | 0.869066   |              25 | Unknown                      |                                | False       | False             |
+| CR553Q04F           | numeric     | 0.869066   |             497 | Unknown                      |                                | False       | False             |
+| CR055Q03F           | numeric     | 0.869066   |             499 | Unknown                      |                                | False       | False             |
+| CR558Q02TT          | numeric     | 0.869066   |             500 | Unknown                      |                                | False       | False             |
+| CR111Q01VS          | numeric     | 0.868805   |               1 | Unknown                      |                                | True        | False             |
+| CR565Q09S           | numeric     | 0.868805   |               2 | Unknown                      |                                | False       | False             |
+| CR111Q01V           | numeric     | 0.868805   |               4 | Unknown                      |                                | False       | False             |
+| CR111Q01A           | numeric     | 0.868805   |              21 | Unknown                      |                                | False       | False             |
+| CR111Q01TT          | numeric     | 0.868805   |             502 | Unknown                      |                                | False       | False             |
+| CR565Q08S           | numeric     | 0.868545   |               2 | Unknown                      |                                | False       | False             |
+| CR550Q04F           | numeric     | 0.868545   |             504 | Unknown                      |                                | False       | False             |
+| CR455Q03F           | numeric     | 0.868284   |             500 | Unknown                      |                                | False       | False             |
+| CR550Q05F           | numeric     | 0.867501   |             504 | Unknown                      |                                | False       | False             |
+| CR565Q08F           | numeric     | 0.866197   |             498 | Unknown                      |                                | False       | False             |
+| CR550Q07VS          | numeric     | 0.865936   |               1 | Unknown                      |                                | True        | False             |
+| CR550Q07V           | numeric     | 0.865936   |               3 | Unknown                      |                                | False       | False             |
+| CR550Q07A           | numeric     | 0.865936   |             187 | Unknown                      |                                | False       | False             |
+| CR219Q01F           | numeric     | 0.865936   |             509 | Unknown                      |                                | False       | False             |
+| CR550Q07TT          | numeric     | 0.865936   |             514 | Unknown                      |                                | False       | False             |
+| CR550Q06VS          | numeric     | 0.865415   |               3 | Unknown                      |                                | False       | False             |
+| CR550Q06V           | numeric     | 0.865415   |               4 | Unknown                      |                                | False       | False             |
+| CR550Q06A           | numeric     | 0.865415   |              26 | Unknown                      |                                | False       | False             |
+| CR550Q06TT          | numeric     | 0.865415   |             512 | Unknown                      |                                | False       | False             |
+| CR565Q03S           | numeric     | 0.865154   |               2 | Unknown                      |                                | False       | False             |
+| CR455Q04S           | numeric     | 0.864632   |               2 | Unknown                      |                                | False       | False             |
+| CR562Q03F           | numeric     | 0.864632   |             514 | Unknown                      |                                | False       | False             |
+| CR550Q05VS          | numeric     | 0.864111   |               3 | Unknown                      |                                | False       | False             |
+| CR550Q05V           | numeric     | 0.864111   |               4 | Unknown                      |                                | False       | False             |
+| CR550Q05A           | numeric     | 0.864111   |              22 | Unknown                      |                                | False       | False             |
+| CR550Q05TT          | numeric     | 0.864111   |             519 | Unknown                      |                                | False       | False             |
+| CR455Q02F           | numeric     | 0.86385    |             519 | Unknown                      |                                | False       | False             |
+| CR550Q04VS          | numeric     | 0.863589   |               3 | Unknown                      |                                | False       | False             |
+| CR550Q04V           | numeric     | 0.863589   |               4 | Unknown                      |                                | False       | False             |
+| CR550Q04A           | numeric     | 0.863589   |              24 | Unknown                      |                                | False       | False             |
+| CR550Q10F           | numeric     | 0.863589   |             513 | Unknown                      |                                | False       | False             |
+| CR550Q04TT          | numeric     | 0.863589   |             523 | Unknown                      |                                | False       | False             |
+| CR455Q05S           | numeric     | 0.863328   |               2 | Unknown                      |                                | False       | False             |
+| CR565Q09F           | numeric     | 0.863067   |             517 | Unknown                      |                                | False       | False             |
+| CR565Q03F           | numeric     | 0.863067   |             525 | Unknown                      |                                | False       | False             |
+| CR455Q04F           | numeric     | 0.862546   |             522 | Unknown                      |                                | False       | False             |
+| CR553Q05S           | numeric     | 0.862285   |               2 | Unknown                      |                                | False       | False             |
+| CR550Q10VS          | numeric     | 0.862024   |               2 | Unknown                      |                                | False       | False             |
+| CR550Q10V           | numeric     | 0.862024   |               6 | Unknown                      |                                | False       | False             |
+| CR550Q10A           | numeric     | 0.862024   |             163 | Unknown                      |                                | False       | False             |
+| CR550Q09F           | numeric     | 0.862024   |             527 | Unknown                      |                                | False       | False             |
+| CR550Q10TT          | numeric     | 0.862024   |             528 | Unknown                      |                                | False       | False             |
+| CR460Q01F           | numeric     | 0.86072    |             534 | Unknown                      |                                | False       | False             |
+| CR565Q01S           | numeric     | 0.860459   |               2 | Unknown                      |                                | False       | False             |
+| CR550Q09VS          | numeric     | 0.860459   |               2 | Unknown                      |                                | False       | False             |
+| CR550Q09V           | numeric     | 0.860459   |               6 | Unknown                      |                                | False       | False             |
+| CR550Q09A           | numeric     | 0.860459   |             190 | Unknown                      |                                | False       | False             |
+| CR553Q05F           | numeric     | 0.860459   |             532 | Unknown                      |                                | False       | False             |
+| CR550Q09TT          | numeric     | 0.860459   |             534 | Unknown                      |                                | False       | False             |
+| CR540Q04F           | numeric     | 0.859155   |             534 | Unknown                      |                                | False       | False             |
+| CR455Q05F           | numeric     | 0.859155   |             535 | Unknown                      |                                | False       | False             |
+| CR565Q01F           | numeric     | 0.858894   |             535 | Unknown                      |                                | False       | False             |
+| CR566Q12F           | numeric     | 0.858372   |             529 | Unknown                      |                                | False       | False             |
+| CR562Q07S           | numeric     | 0.858112   |               2 | Unknown                      |                                | False       | False             |
+| CR556Q12SB          | numeric     | 0.857851   |               2 | Unknown                      |                                | False       | False             |
+| CR565Q09VS          | numeric     | 0.85759    |               1 | Unknown                      |                                | True        | False             |
+| CR556Q12SC          | numeric     | 0.85759    |               2 | Unknown                      |                                | False       | False             |
+| CR556Q12SD          | numeric     | 0.85759    |               2 | Unknown                      |                                | False       | False             |
+| CR565Q08V           | numeric     | 0.85759    |               3 | Unknown                      |                                | False       | False             |
+| CR565Q08VS          | numeric     | 0.85759    |               3 | Unknown                      |                                | False       | False             |
+| CR565Q09V           | numeric     | 0.85759    |               3 | Unknown                      |                                | False       | False             |
+| CR565Q08A           | numeric     | 0.85759    |              15 | Unknown                      |                                | False       | False             |
+| CR565Q09A           | numeric     | 0.85759    |              15 | Unknown                      |                                | False       | False             |
+| CR565Q09TT          | numeric     | 0.85759    |             543 | Unknown                      |                                | False       | False             |
+| CR565Q08TT          | numeric     | 0.85759    |             546 | Unknown                      |                                | False       | False             |
+| CR455Q05VS          | numeric     | 0.857329   |               1 | Unknown                      |                                | True        | False             |
+| CR455Q05V           | numeric     | 0.857329   |               4 | Unknown                      |                                | False       | False             |
+| CR455Q05A           | numeric     | 0.857329   |              22 | Unknown                      |                                | False       | False             |
+| CR455Q05TT          | numeric     | 0.857329   |             547 | Unknown                      |                                | False       | False             |
+| CR564Q05F           | numeric     | 0.856808   |             537 | Unknown                      |                                | False       | False             |
+| CR455Q04VS          | numeric     | 0.856547   |               2 | Unknown                      |                                | False       | False             |
+| CR553Q01S           | numeric     | 0.856547   |               2 | Unknown                      |                                | False       | False             |
+| CR455Q04V           | numeric     | 0.856547   |               5 | Unknown                      |                                | False       | False             |
+| CR455Q04A           | numeric     | 0.856547   |              17 | Unknown                      |                                | False       | False             |
+| CR566Q09F           | numeric     | 0.856547   |             545 | Unknown                      |                                | False       | False             |
+| CR455Q04TT          | numeric     | 0.856547   |             550 | Unknown                      |                                | False       | False             |
+| CR566Q06S           | numeric     | 0.856286   |               2 | Unknown                      |                                | False       | False             |
+| CR565Q05VS          | numeric     | 0.856286   |               3 | Unknown                      |                                | False       | False             |
+| CR565Q05V           | numeric     | 0.856286   |               5 | Unknown                      |                                | False       | False             |
+| CR565Q05A           | numeric     | 0.856286   |             219 | Unknown                      |                                | False       | False             |
+| CR565Q05TT          | numeric     | 0.856286   |             550 | Unknown                      |                                | False       | False             |
+| CR561Q04SC          | numeric     | 0.856025   |               2 | Unknown                      |                                | False       | False             |
+| CR553Q02S           | numeric     | 0.856025   |               2 | Unknown                      |                                | False       | False             |
+| CR566Q05S           | numeric     | 0.855764   |               2 | Unknown                      |                                | False       | False             |
+| CR553Q01F           | numeric     | 0.855764   |             544 | Unknown                      |                                | False       | False             |
+| CR455Q03VS          | numeric     | 0.855243   |               3 | Unknown                      |                                | False       | False             |
+| CR565Q03VS          | numeric     | 0.855243   |               4 | Unknown                      |                                | False       | False             |
+| CR565Q03V           | numeric     | 0.855243   |               6 | Unknown                      |                                | False       | False             |
+| CR455Q03V           | numeric     | 0.855243   |               6 | Unknown                      |                                | False       | False             |
+| CR565Q03A           | numeric     | 0.855243   |              25 | Unknown                      |                                | False       | False             |
+| CR455Q03A           | numeric     | 0.855243   |             137 | Unknown                      |                                | False       | False             |
+| CR565Q03TT          | numeric     | 0.855243   |             554 | Unknown                      |                                | False       | False             |
+| CR455Q03TT          | numeric     | 0.855243   |             554 | Unknown                      |                                | False       | False             |
+| CR561Q04SB          | numeric     | 0.854982   |               2 | Unknown                      |                                | False       | False             |
+| CR566Q14S           | numeric     | 0.854982   |               2 | Unknown                      |                                | False       | False             |
+| CR561Q04SA          | numeric     | 0.854721   |               2 | Unknown                      |                                | False       | False             |
+| CR561Q07F           | numeric     | 0.854721   |             554 | Unknown                      |                                | False       | False             |
+| CR556Q12SA          | numeric     | 0.853678   |               2 | Unknown                      |                                | False       | False             |
+| CR566Q04S           | numeric     | 0.853678   |               2 | Unknown                      |                                | False       | False             |
+| CR565Q02VS          | numeric     | 0.853678   |               3 | Unknown                      |                                | False       | False             |
+| CR565Q02V           | numeric     | 0.853678   |               6 | Unknown                      |                                | False       | False             |
+| CR565Q02A           | numeric     | 0.853678   |             228 | Unknown                      |                                | False       | False             |
+| CR565Q02TT          | numeric     | 0.853678   |             561 | Unknown                      |                                | False       | False             |
+| CR562Q07F           | numeric     | 0.853417   |             558 | Unknown                      |                                | False       | False             |
+| CR553Q02F           | numeric     | 0.853417   |             559 | Unknown                      |                                | False       | False             |
+| CR553Q07VS          | numeric     | 0.853156   |               1 | Unknown                      |                                | True        | False             |
+| CR565Q01VS          | numeric     | 0.853156   |               2 | Unknown                      |                                | False       | False             |
+| CR553Q07V           | numeric     | 0.853156   |               2 | Unknown                      |                                | False       | False             |
+| CR565Q01V           | numeric     | 0.853156   |               5 | Unknown                      |                                | False       | False             |
+| CR553Q07A           | numeric     | 0.853156   |              23 | Unknown                      |                                | False       | False             |
+| CR565Q01A           | numeric     | 0.853156   |              26 | Unknown                      |                                | False       | False             |
+| CR553Q07TT          | numeric     | 0.853156   |             561 | Unknown                      |                                | False       | False             |
+| CR565Q01TT          | numeric     | 0.853156   |             563 | Unknown                      |                                | False       | False             |
+| CR556Q10S           | numeric     | 0.852634   |               2 | Unknown                      |                                | False       | False             |
+| CR570Q10F           | numeric     | 0.852374   |             553 | Unknown                      |                                | False       | False             |
+| CR566Q06F           | numeric     | 0.852374   |             555 | Unknown                      |                                | False       | False             |
+| CR556Q12S           | numeric     | 0.852113   |               3 | Unknown                      |                                | False       | False             |
+| CR561Q03S           | numeric     | 0.851852   |               2 | Unknown                      |                                | False       | False             |
+| CR561Q04S           | numeric     | 0.851852   |               2 | Unknown                      |                                | False       | False             |
+| CR553Q05VS          | numeric     | 0.85133    |               2 | Unknown                      |                                | False       | False             |
+| CR553Q05V           | numeric     | 0.85133    |               3 | Unknown                      |                                | False       | False             |
+| CR553Q05A           | numeric     | 0.85133    |              19 | Unknown                      |                                | False       | False             |
+| CR553Q05TT          | numeric     | 0.85133    |             569 | Unknown                      |                                | False       | False             |
+| CR455Q02VS          | numeric     | 0.851069   |               2 | Unknown                      |                                | False       | True              |
+| CR455Q02V           | numeric     | 0.851069   |               3 | Unknown                      |                                | False       | False             |
+| CR455Q02A           | numeric     | 0.851069   |             198 | Unknown                      |                                | False       | False             |
+| CR453Q06F           | numeric     | 0.851069   |             566 | Unknown                      |                                | False       | False             |
+| CR455Q02TT          | numeric     | 0.851069   |             570 | Unknown                      |                                | False       | False             |
+| CR561Q04F           | numeric     | 0.850287   |             565 | Unknown                      |                                | False       | False             |
+| CR569Q06F           | numeric     | 0.850026   |             573 | Unknown                      |                                | False       | False             |
+| CR566Q05F           | numeric     | 0.849504   |             567 | Unknown                      |                                | False       | False             |
+| CR561Q03F           | numeric     | 0.849504   |             574 | Unknown                      |                                | False       | False             |
+| CR566Q04F           | numeric     | 0.849244   |             575 | Unknown                      |                                | False       | False             |
+| CR561Q01S           | numeric     | 0.848983   |               2 | Unknown                      |                                | False       | False             |
+| CR562Q02S           | numeric     | 0.848983   |               2 | Unknown                      |                                | False       | False             |
+| CR553Q04VS          | numeric     | 0.848983   |               2 | Unknown                      |                                | False       | False             |
+| CR563Q03S           | numeric     | 0.848983   |               2 | Unknown                      |                                | False       | False             |
+| CR553Q04V           | numeric     | 0.848983   |               3 | Unknown                      |                                | False       | False             |
+| CR553Q04A           | numeric     | 0.848983   |             245 | Unknown                      |                                | False       | False             |
+| CR553Q04TT          | numeric     | 0.848983   |             577 | Unknown                      |                                | False       | False             |
+| CR561Q08VS          | numeric     | 0.848722   |               1 | Unknown                      |                                | True        | False             |
+| CR553Q01VS          | numeric     | 0.848722   |               2 | Unknown                      |                                | False       | False             |
+| CR561Q08V           | numeric     | 0.848722   |               4 | Unknown                      |                                | False       | False             |
+| CR553Q01V           | numeric     | 0.848722   |               4 | Unknown                      |                                | False       | False             |
+| CR553Q01A           | numeric     | 0.848722   |              14 | Unknown                      |                                | False       | False             |
+| CR561Q08A           | numeric     | 0.848722   |              24 | Unknown                      |                                | False       | False             |
+| CR566Q14F           | numeric     | 0.848722   |             570 | Unknown                      |                                | False       | False             |
+| CR561Q08TT          | numeric     | 0.848722   |             571 | Unknown                      |                                | False       | False             |
+| CR553Q01TT          | numeric     | 0.848722   |             573 | Unknown                      |                                | False       | False             |
+| CR556Q05S           | numeric     | 0.8482     |               2 | Unknown                      |                                | False       | False             |
+| CR561Q07VS          | numeric     | 0.8482     |               3 | Unknown                      |                                | False       | False             |
+| CR561Q07V           | numeric     | 0.8482     |               6 | Unknown                      |                                | False       | False             |
+| CR561Q07A           | numeric     | 0.8482     |             197 | Unknown                      |                                | False       | False             |
+| CR556Q10F           | numeric     | 0.8482     |             576 | Unknown                      |                                | False       | False             |
+| CR561Q07TT          | numeric     | 0.8482     |             582 | Unknown                      |                                | False       | False             |
+| CR562Q07VS          | numeric     | 0.847679   |               1 | Unknown                      |                                | True        | False             |
+| CR553Q02VS          | numeric     | 0.847679   |               2 | Unknown                      |                                | False       | False             |
+| CR562Q07V           | numeric     | 0.847679   |               3 | Unknown                      |                                | False       | False             |
+| CR553Q02V           | numeric     | 0.847679   |               3 | Unknown                      |                                | False       | False             |
+| CR562Q07A           | numeric     | 0.847679   |              14 | Unknown                      |                                | False       | False             |
+| CR553Q02A           | numeric     | 0.847679   |              21 | Unknown                      |                                | False       | False             |
+| CR562Q07TT          | numeric     | 0.847679   |             583 | Unknown                      |                                | False       | False             |
+| CR553Q02TT          | numeric     | 0.847679   |             584 | Unknown                      |                                | False       | False             |
+| CR561Q06VS          | numeric     | 0.846896   |               4 | Unknown                      |                                | False       | False             |
+| CR561Q06V           | numeric     | 0.846896   |               7 | Unknown                      |                                | False       | False             |
+| CR561Q06A           | numeric     | 0.846896   |              28 | Unknown                      |                                | False       | False             |
+| CR561Q01F           | numeric     | 0.846896   |             584 | Unknown                      |                                | False       | False             |
+| CR561Q06TT          | numeric     | 0.846896   |             585 | Unknown                      |                                | False       | False             |
+| CR055Q01S           | numeric     | 0.846635   |               2 | Unknown                      |                                | False       | False             |
+| CR563Q02S           | numeric     | 0.846635   |               2 | Unknown                      |                                | False       | False             |
+| CR562Q02F           | numeric     | 0.846635   |             587 | Unknown                      |                                | False       | False             |
+| CR556Q04S           | numeric     | 0.846114   |               2 | Unknown                      |                                | False       | False             |
+| CR542Q09S           | numeric     | 0.845592   |               2 | Unknown                      |                                | False       | False             |
+| CR562Q06VS          | numeric     | 0.845592   |               2 | Unknown                      |                                | False       | False             |
+| CR556Q03S           | numeric     | 0.845592   |               2 | Unknown                      |                                | False       | False             |
+| CR562Q06V           | numeric     | 0.845592   |               4 | Unknown                      |                                | False       | False             |
+| CR562Q06A           | numeric     | 0.845592   |             163 | Unknown                      |                                | False       | False             |
+| CR562Q06TT          | numeric     | 0.845592   |             592 | Unknown                      |                                | False       | False             |
+| CR563Q07S           | numeric     | 0.845331   |               2 | Unknown                      |                                | False       | False             |
+| CR561Q04VS          | numeric     | 0.845331   |               4 | Unknown                      |                                | False       | False             |
+| CR561Q04V           | numeric     | 0.845331   |               7 | Unknown                      |                                | False       | False             |
+| CR561Q04A           | numeric     | 0.845331   |              20 | Unknown                      |                                | False       | False             |
+| CR561Q04TT          | numeric     | 0.845331   |             592 | Unknown                      |                                | False       | False             |
+| CR562Q05VS          | numeric     | 0.844288   |               2 | Unknown                      |                                | False       | False             |
+| CR562Q05V           | numeric     | 0.844288   |               5 | Unknown                      |                                | False       | False             |
+| CR562Q05A           | numeric     | 0.844288   |              25 | Unknown                      |                                | False       | False             |
+| CR556Q05F           | numeric     | 0.844288   |             584 | Unknown                      |                                | False       | False             |
+| CR556Q12F           | numeric     | 0.844288   |             586 | Unknown                      |                                | False       | False             |
+| CR453Q04F           | numeric     | 0.844288   |             591 | Unknown                      |                                | False       | False             |
+| CR562Q05TT          | numeric     | 0.844288   |             596 | Unknown                      |                                | False       | False             |
+| CR561Q03VS          | numeric     | 0.844027   |               5 | Unknown                      |                                | False       | False             |
+| CR561Q03V           | numeric     | 0.844027   |               7 | Unknown                      |                                | False       | False             |
+| CR561Q03A           | numeric     | 0.844027   |              17 | Unknown                      |                                | False       | False             |
+| CR561Q03TT          | numeric     | 0.844027   |             596 | Unknown                      |                                | False       | False             |
+| CR456Q06F           | numeric     | 0.843766   |             588 | Unknown                      |                                | False       | False             |
+| CR563Q03F           | numeric     | 0.843766   |             593 | Unknown                      |                                | False       | False             |
+| CR055Q01F           | numeric     | 0.843766   |             599 | Unknown                      |                                | False       | False             |
+| CR446Q06F           | numeric     | 0.842984   |             596 | Unknown                      |                                | False       | False             |
+| CR563Q10S           | numeric     | 0.842723   |               2 | Unknown                      |                                | False       | False             |
+| CR562Q03VS          | numeric     | 0.842723   |               3 | Unknown                      |                                | False       | False             |
+| CR562Q03V           | numeric     | 0.842723   |               5 | Unknown                      |                                | False       | False             |
+| CR562Q03A           | numeric     | 0.842723   |             171 | Unknown                      |                                | False       | False             |
+| CR562Q03TT          | numeric     | 0.842723   |             602 | Unknown                      |                                | False       | False             |
+| CR561Q01VS          | numeric     | 0.842462   |               2 | Unknown                      |                                | False       | False             |
+| CR561Q01V           | numeric     | 0.842462   |               5 | Unknown                      |                                | False       | False             |
+| CR561Q01A           | numeric     | 0.842462   |              19 | Unknown                      |                                | False       | False             |
+| CR561Q01TT          | numeric     | 0.842462   |             604 | Unknown                      |                                | False       | False             |
+| CR055Q05VS          | numeric     | 0.842201   |               2 | Unknown                      |                                | False       | True              |
+| CR055Q05V           | numeric     | 0.842201   |               3 | Unknown                      |                                | False       | False             |
+| CR055Q05A           | numeric     | 0.842201   |             184 | Unknown                      |                                | False       | False             |
+| CR055Q05TT          | numeric     | 0.842201   |             601 | Unknown                      |                                | False       | False             |
+| CR556Q04F           | numeric     | 0.842201   |             602 | Unknown                      |                                | False       | False             |
+| CR556Q01S           | numeric     | 0.841941   |               2 | Unknown                      |                                | False       | False             |
+| CR563Q09F           | numeric     | 0.84168    |             605 | Unknown                      |                                | False       | False             |
+| CR055Q03VS          | numeric     | 0.841158   |               3 | Unknown                      |                                | False       | False             |
+| CR055Q03V           | numeric     | 0.841158   |               4 | Unknown                      |                                | False       | False             |
+| CR055Q03A           | numeric     | 0.841158   |             174 | Unknown                      |                                | False       | False             |
+| CR556Q03F           | numeric     | 0.841158   |             602 | Unknown                      |                                | False       | False             |
+| CR055Q03TT          | numeric     | 0.841158   |             609 | Unknown                      |                                | False       | False             |
+| CR562Q02VS          | numeric     | 0.840897   |               2 | Unknown                      |                                | False       | False             |
+| CR562Q02V           | numeric     | 0.840897   |               4 | Unknown                      |                                | False       | False             |
+| CR562Q02A           | numeric     | 0.840897   |              19 | Unknown                      |                                | False       | False             |
+| CR562Q02TT          | numeric     | 0.840897   |             610 | Unknown                      |                                | False       | False             |
+| CR460Q06S           | numeric     | 0.840636   |               2 | Unknown                      |                                | False       | False             |
+| CR055Q02VS          | numeric     | 0.840376   |               3 | Unknown                      |                                | False       | False             |
+| CR055Q02V           | numeric     | 0.840376   |               6 | Unknown                      |                                | False       | False             |
+| CR055Q02A           | numeric     | 0.840376   |             221 | Unknown                      |                                | False       | False             |
+| CR055Q02TT          | numeric     | 0.840376   |             612 | Unknown                      |                                | False       | False             |
+| CR566Q12VS          | numeric     | 0.840115   |               1 | Unknown                      |                                | True        | False             |
+| CR566Q12V           | numeric     | 0.840115   |               3 | Unknown                      |                                | False       | False             |
+| CR566Q12A           | numeric     | 0.840115   |             142 | Unknown                      |                                | False       | False             |
+| CR563Q02F           | numeric     | 0.840115   |             606 | Unknown                      |                                | False       | False             |
+| CR566Q12TT          | numeric     | 0.840115   |             612 | Unknown                      |                                | False       | False             |
+| CR460Q05S           | numeric     | 0.839854   |               2 | Unknown                      |                                | False       | False             |
+| CR456Q02F           | numeric     | 0.839593   |             608 | Unknown                      |                                | False       | False             |
+| CR569Q02S           | numeric     | 0.839332   |               2 | Unknown                      |                                | False       | False             |
+| CR566Q09VS          | numeric     | 0.838811   |               3 | Unknown                      |                                | False       | False             |
+| CR566Q09V           | numeric     | 0.838811   |               4 | Unknown                      |                                | False       | False             |
+| CR566Q09A           | numeric     | 0.838811   |              27 | Unknown                      |                                | False       | False             |
+| CR563Q07F           | numeric     | 0.838811   |             605 | Unknown                      |                                | False       | False             |
+| CR566Q09TT          | numeric     | 0.838811   |             612 | Unknown                      |                                | False       | False             |
+| CR055Q01VS          | numeric     | 0.838289   |               1 | Unknown                      |                                | True        | False             |
+| CR055Q01V           | numeric     | 0.838289   |               5 | Unknown                      |                                | False       | False             |
+| CR055Q01A           | numeric     | 0.838289   |              20 | Unknown                      |                                | False       | False             |
+| CR055Q01TT          | numeric     | 0.838289   |             620 | Unknown                      |                                | False       | False             |
+| CR460Q05F           | numeric     | 0.838028   |             616 | Unknown                      |                                | False       | False             |
+| CR563Q10F           | numeric     | 0.837507   |             614 | Unknown                      |                                | False       | False             |
+| CR556Q01F           | numeric     | 0.837246   |             619 | Unknown                      |                                | False       | False             |
+| CR540Q06S           | numeric     | 0.836724   |               2 | Unknown                      |                                | False       | False             |
+| CR570Q06S           | numeric     | 0.836724   |               2 | Unknown                      |                                | False       | False             |
+| CR566Q06VS          | numeric     | 0.836724   |               3 | Unknown                      |                                | False       | False             |
+| CR566Q06V           | numeric     | 0.836724   |               5 | Unknown                      |                                | False       | False             |
+| CR566Q06A           | numeric     | 0.836724   |              17 | Unknown                      |                                | False       | False             |
+| CR566Q06TT          | numeric     | 0.836724   |             622 | Unknown                      |                                | False       | False             |
+| CR570Q08S           | numeric     | 0.836463   |               2 | Unknown                      |                                | False       | False             |
+| CR570Q04SD          | numeric     | 0.835942   |               2 | Unknown                      |                                | False       | False             |
+| CR540Q05S           | numeric     | 0.835681   |               2 | Unknown                      |                                | False       | False             |
+| CR570Q04SC          | numeric     | 0.83542    |               2 | Unknown                      |                                | False       | False             |
+| CR542Q02F           | numeric     | 0.835159   |             613 | Unknown                      |                                | False       | False             |
+| CR566Q14VS          | numeric     | 0.834898   |               4 | Unknown                      |                                | False       | False             |
+| CR566Q14V           | numeric     | 0.834898   |               6 | Unknown                      |                                | False       | False             |
+| CR566Q14A           | numeric     | 0.834898   |              29 | Unknown                      |                                | False       | False             |
+| CR566Q14TT          | numeric     | 0.834898   |             632 | Unknown                      |                                | False       | False             |
+| CR569Q04S           | numeric     | 0.833855   |               2 | Unknown                      |                                | False       | False             |
+| CR564Q04S           | numeric     | 0.833594   |               2 | Unknown                      |                                | False       | False             |
+| CR569Q03S           | numeric     | 0.833594   |               2 | Unknown                      |                                | False       | False             |
+| CR564Q03S           | numeric     | 0.833333   |               2 | Unknown                      |                                | False       | False             |
+| CR566Q05VS          | numeric     | 0.833333   |               3 | Unknown                      |                                | False       | False             |
+| CR566Q05V           | numeric     | 0.833333   |               6 | Unknown                      |                                | False       | False             |
+| CR566Q05A           | numeric     | 0.833333   |              16 | Unknown                      |                                | False       | False             |
+| CR570Q08F           | numeric     | 0.833333   |             628 | Unknown                      |                                | False       | False             |
+| CR566Q05TT          | numeric     | 0.833333   |             633 | Unknown                      |                                | False       | False             |
+| CR570Q04SB          | numeric     | 0.833073   |               2 | Unknown                      |                                | False       | False             |
+| CR570Q05S           | numeric     | 0.832551   |               2 | Unknown                      |                                | False       | False             |
+| CR446Q03S           | numeric     | 0.83229    |               2 | Unknown                      |                                | False       | False             |
+| CR460Q06F           | numeric     | 0.83229    |             629 | Unknown                      |                                | False       | False             |
+| CR540Q05F           | numeric     | 0.83229    |             638 | Unknown                      |                                | False       | False             |
+| CR570Q04SA          | numeric     | 0.832029   |               2 | Unknown                      |                                | False       | False             |
+| CR566Q04VS          | numeric     | 0.832029   |               3 | Unknown                      |                                | False       | False             |
+| CR566Q04V           | numeric     | 0.832029   |               5 | Unknown                      |                                | False       | False             |
+| CR566Q04A           | numeric     | 0.832029   |              18 | Unknown                      |                                | False       | False             |
+| CR540Q06F           | numeric     | 0.832029   |             637 | Unknown                      |                                | False       | False             |
+| CR566Q04TT          | numeric     | 0.832029   |             643 | Unknown                      |                                | False       | False             |
+| CR569Q03F           | numeric     | 0.831768   |             632 | Unknown                      |                                | False       | False             |
+| CR542Q09F           | numeric     | 0.831768   |             636 | Unknown                      |                                | False       | False             |
+| CR569Q04F           | numeric     | 0.831768   |             636 | Unknown                      |                                | False       | False             |
+| CR542Q08S           | numeric     | 0.830986   |               2 | Unknown                      |                                | False       | False             |
+| CR543Q10S           | numeric     | 0.830986   |               2 | Unknown                      |                                | False       | False             |
+| CR569Q02F           | numeric     | 0.830986   |             641 | Unknown                      |                                | False       | False             |
+| CR543Q15F           | numeric     | 0.830986   |             644 | Unknown                      |                                | False       | False             |
+| CR570Q06F           | numeric     | 0.830986   |             644 | Unknown                      |                                | False       | False             |
+| CR564Q04F           | numeric     | 0.830725   |             642 | Unknown                      |                                | False       | False             |
+| CR556Q12VS          | numeric     | 0.830464   |               2 | Unknown                      |                                | False       | True              |
+| CR556Q12V           | numeric     | 0.830464   |               4 | Unknown                      |                                | False       | False             |
+| CR556Q12A           | numeric     | 0.830464   |              23 | Unknown                      |                                | False       | False             |
+| CR556Q12TT          | numeric     | 0.830464   |             647 | Unknown                      |                                | False       | False             |
+| CR543Q09S           | numeric     | 0.830203   |               2 | Unknown                      |                                | False       | False             |
+| CR446Q03F           | numeric     | 0.830203   |             651 | Unknown                      |                                | False       | False             |
+| CR563Q12VS          | numeric     | 0.829943   |               1 | Unknown                      |                                | True        | False             |
+| CR569Q01S           | numeric     | 0.829943   |               2 | Unknown                      |                                | False       | False             |
+| CR570Q04S           | numeric     | 0.829943   |               2 | Unknown                      |                                | False       | False             |
+| CR566Q03VS          | numeric     | 0.829943   |               2 | Unknown                      |                                | False       | False             |
+| CR563Q12V           | numeric     | 0.829943   |               3 | Unknown                      |                                | False       | False             |
+| CR566Q03V           | numeric     | 0.829943   |               4 | Unknown                      |                                | False       | False             |
+| CR566Q03A           | numeric     | 0.829943   |             165 | Unknown                      |                                | False       | False             |
+| CR563Q12A           | numeric     | 0.829943   |             180 | Unknown                      |                                | False       | False             |
+| CR563Q12TT          | numeric     | 0.829943   |             651 | Unknown                      |                                | False       | False             |
+| CR566Q03TT          | numeric     | 0.829943   |             652 | Unknown                      |                                | False       | False             |
+| CR556Q10VS          | numeric     | 0.829682   |               4 | Unknown                      |                                | False       | False             |
+| CR556Q10V           | numeric     | 0.829682   |               5 | Unknown                      |                                | False       | False             |
+| CR556Q10A           | numeric     | 0.829682   |              15 | Unknown                      |                                | False       | False             |
+| CR564Q03F           | numeric     | 0.829682   |             641 | Unknown                      |                                | False       | False             |
+| CR556Q10TT          | numeric     | 0.829682   |             648 | Unknown                      |                                | False       | False             |
+| CR564Q02S           | numeric     | 0.829421   |               2 | Unknown                      |                                | False       | False             |
+| CR540Q03S           | numeric     | 0.82916    |               2 | Unknown                      |                                | False       | False             |
+| CR556Q05VS          | numeric     | 0.82916    |               4 | Unknown                      |                                | False       | False             |
+| CR556Q05V           | numeric     | 0.82916    |               5 | Unknown                      |                                | False       | False             |
+| CR556Q05A           | numeric     | 0.82916    |              13 | Unknown                      |                                | False       | False             |
+| CR556Q05TT          | numeric     | 0.82916    |             648 | Unknown                      |                                | False       | False             |
+| CR542Q05S           | numeric     | 0.828899   |               2 | Unknown                      |                                | False       | False             |
+| CR543Q04S           | numeric     | 0.828899   |               2 | Unknown                      |                                | False       | False             |
+| CR556Q09VS          | numeric     | 0.828899   |               3 | Unknown                      |                                | False       | False             |
+| CR556Q09V           | numeric     | 0.828899   |               5 | Unknown                      |                                | False       | False             |
+| CR556Q09A           | numeric     | 0.828899   |             162 | Unknown                      |                                | False       | False             |
+| CR542Q08F           | numeric     | 0.828899   |             651 | Unknown                      |                                | False       | False             |
+| CR556Q09TT          | numeric     | 0.828899   |             655 | Unknown                      |                                | False       | False             |
+| CR219Q02VS          | numeric     | 0.828638   |               1 | Unknown                      |                                | True        | False             |
+| CR563Q03VS          | numeric     | 0.828638   |               3 | Unknown                      |                                | False       | False             |
+| CR563Q03V           | numeric     | 0.828638   |               4 | Unknown                      |                                | False       | False             |
+| CR219Q02V           | numeric     | 0.828638   |               7 | Unknown                      |                                | False       | False             |
+| CR563Q03A           | numeric     | 0.828638   |              25 | Unknown                      |                                | False       | False             |
+| CR219Q02A           | numeric     | 0.828638   |             158 | Unknown                      |                                | False       | False             |
+| CR570Q05F           | numeric     | 0.828638   |             640 | Unknown                      |                                | False       | False             |
+| CR563Q03TT          | numeric     | 0.828638   |             652 | Unknown                      |                                | False       | False             |
+| CR219Q02TT          | numeric     | 0.828638   |             655 | Unknown                      |                                | False       | False             |
+| CR543Q01S           | numeric     | 0.828378   |               2 | Unknown                      |                                | False       | False             |
+| CR543Q10F           | numeric     | 0.828117   |             651 | Unknown                      |                                | False       | False             |
+| CR542Q01S           | numeric     | 0.827595   |               2 | Unknown                      |                                | False       | False             |
+| CR543Q03S           | numeric     | 0.827595   |               2 | Unknown                      |                                | False       | False             |
+| CR556Q04V           | numeric     | 0.827334   |               4 | Unknown                      |                                | False       | False             |
+| CR556Q04VS          | numeric     | 0.827334   |               4 | Unknown                      |                                | False       | False             |
+| CR556Q04A           | numeric     | 0.827334   |              17 | Unknown                      |                                | False       | False             |
+| CR556Q04TT          | numeric     | 0.827334   |             661 | Unknown                      |                                | False       | False             |
+| CR540Q01S           | numeric     | 0.827074   |               2 | Unknown                      |                                | False       | False             |
+| CR456Q01S           | numeric     | 0.827074   |               2 | Unknown                      |                                | False       | False             |
+| CR564Q02F           | numeric     | 0.827074   |             653 | Unknown                      |                                | False       | False             |
+| CR543Q09F           | numeric     | 0.827074   |             653 | Unknown                      |                                | False       | False             |
+| CR540Q03F           | numeric     | 0.827074   |             655 | Unknown                      |                                | False       | False             |
+| CR446Q06VS          | numeric     | 0.826813   |               1 | Unknown                      |                                | True        | False             |
+| CR563Q02VS          | numeric     | 0.826813   |               2 | Unknown                      |                                | False       | False             |
+| CR446Q06V           | numeric     | 0.826813   |               3 | Unknown                      |                                | False       | False             |
+| CR563Q02V           | numeric     | 0.826813   |               5 | Unknown                      |                                | False       | False             |
+| CR563Q02A           | numeric     | 0.826813   |              31 | Unknown                      |                                | False       | False             |
+| CR446Q06A           | numeric     | 0.826813   |             168 | Unknown                      |                                | False       | False             |
+| CR563Q02TT          | numeric     | 0.826813   |             661 | Unknown                      |                                | False       | False             |
+| CR446Q06TT          | numeric     | 0.826813   |             662 | Unknown                      |                                | False       | False             |
+| CR569Q06VS          | numeric     | 0.826552   |               1 | Unknown                      |                                | True        | False             |
+| CR569Q04VS          | numeric     | 0.826552   |               2 | Unknown                      |                                | False       | False             |
+| CR569Q06V           | numeric     | 0.826552   |               2 | Unknown                      |                                | False       | False             |
+| CR453Q05S           | numeric     | 0.826552   |               2 | Unknown                      |                                | False       | False             |
+| CR569Q04V           | numeric     | 0.826552   |               3 | Unknown                      |                                | False       | False             |
+| CR569Q04A           | numeric     | 0.826552   |              11 | Unknown                      |                                | False       | False             |
+| CR569Q06A           | numeric     | 0.826552   |             173 | Unknown                      |                                | False       | False             |
+| CR569Q04TT          | numeric     | 0.826552   |             660 | Unknown                      |                                | False       | False             |
+| CR569Q06TT          | numeric     | 0.826552   |             663 | Unknown                      |                                | False       | False             |
+| CR542Q05F           | numeric     | 0.826291   |             655 | Unknown                      |                                | False       | False             |
+| CR569Q01F           | numeric     | 0.826291   |             660 | Unknown                      |                                | False       | False             |
+| CR564Q01S           | numeric     | 0.82603    |               2 | Unknown                      |                                | False       | False             |
+| CR556Q03V           | numeric     | 0.82603    |               3 | Unknown                      |                                | False       | False             |
+| CR556Q03VS          | numeric     | 0.82603    |               3 | Unknown                      |                                | False       | False             |
+| CR556Q03A           | numeric     | 0.82603    |              18 | Unknown                      |                                | False       | False             |
+| CR543Q04F           | numeric     | 0.82603    |             659 | Unknown                      |                                | False       | False             |
+| CR570Q04F           | numeric     | 0.82603    |             659 | Unknown                      |                                | False       | False             |
+| CR556Q03TT          | numeric     | 0.82603    |             660 | Unknown                      |                                | False       | False             |
+| CR542Q01F           | numeric     | 0.825769   |             662 | Unknown                      |                                | False       | False             |
+| CR570Q02S           | numeric     | 0.825509   |               2 | Unknown                      |                                | False       | False             |
+| CR563Q07VS          | numeric     | 0.825509   |               3 | Unknown                      |                                | False       | False             |
+| CR563Q07V           | numeric     | 0.825509   |               5 | Unknown                      |                                | False       | False             |
+| CR563Q07A           | numeric     | 0.825509   |              40 | Unknown                      |                                | False       | False             |
+| CR563Q07TT          | numeric     | 0.825509   |             665 | Unknown                      |                                | False       | False             |
+| CR456Q01F           | numeric     | 0.825509   |             666 | Unknown                      |                                | False       | False             |
+| CR570Q01S           | numeric     | 0.825248   |               2 | Unknown                      |                                | False       | False             |
+| CR569Q03VS          | numeric     | 0.825248   |               3 | Unknown                      |                                | False       | False             |
+| CR569Q03V           | numeric     | 0.825248   |               4 | Unknown                      |                                | False       | False             |
+| CR569Q03A           | numeric     | 0.825248   |              10 | Unknown                      |                                | False       | False             |
+| CR569Q03TT          | numeric     | 0.825248   |             663 | Unknown                      |                                | False       | False             |
+| CR446Q03VS          | numeric     | 0.824987   |               1 | Unknown                      |                                | True        | False             |
+| CR556Q01V           | numeric     | 0.824987   |               2 | Unknown                      |                                | False       | False             |
+| CR556Q01VS          | numeric     | 0.824987   |               2 | Unknown                      |                                | False       | False             |
+| CR446Q03V           | numeric     | 0.824987   |               3 | Unknown                      |                                | False       | False             |
+| CR556Q01A           | numeric     | 0.824987   |              19 | Unknown                      |                                | False       | False             |
+| CR446Q03A           | numeric     | 0.824987   |              30 | Unknown                      |                                | False       | False             |
+| CR446Q03TT          | numeric     | 0.824987   |             667 | Unknown                      |                                | False       | False             |
+| CR556Q01TT          | numeric     | 0.824987   |             669 | Unknown                      |                                | False       | False             |
+| CR569Q02VS          | numeric     | 0.824726   |               2 | Unknown                      |                                | False       | False             |
+| CR569Q02V           | numeric     | 0.824726   |               6 | Unknown                      |                                | False       | False             |
+| CR569Q02A           | numeric     | 0.824726   |              57 | Unknown                      |                                | False       | False             |
+| CR543Q03F           | numeric     | 0.824726   |             662 | Unknown                      |                                | False       | False             |
+| CR564Q01F           | numeric     | 0.824726   |             664 | Unknown                      |                                | False       | False             |
+| CR569Q02TT          | numeric     | 0.824726   |             670 | Unknown                      |                                | False       | False             |
+| CR540Q01F           | numeric     | 0.824726   |             671 | Unknown                      |                                | False       | False             |
+| CR563Q10VS          | numeric     | 0.824465   |               2 | Unknown                      |                                | False       | False             |
+| CR563Q10V           | numeric     | 0.824465   |               6 | Unknown                      |                                | False       | False             |
+| CR563Q10A           | numeric     | 0.824465   |              25 | Unknown                      |                                | False       | False             |
+| CR563Q10TT          | numeric     | 0.824465   |             669 | Unknown                      |                                | False       | False             |
+| CR540Q06VS          | numeric     | 0.824204   |               1 | Unknown                      |                                | True        | False             |
+| CR570Q10VS          | numeric     | 0.824204   |               1 | Unknown                      |                                | True        | False             |
+| CR540Q06V           | numeric     | 0.824204   |               3 | Unknown                      |                                | False       | False             |
+| CR570Q10V           | numeric     | 0.824204   |               3 | Unknown                      |                                | False       | False             |
+| CR540Q06A           | numeric     | 0.824204   |              15 | Unknown                      |                                | False       | False             |
+| CR570Q10A           | numeric     | 0.824204   |             140 | Unknown                      |                                | False       | False             |
+| CR540Q06TT          | numeric     | 0.824204   |             666 | Unknown                      |                                | False       | False             |
+| CR570Q10TT          | numeric     | 0.824204   |             671 | Unknown                      |                                | False       | False             |
+| CR543Q01F           | numeric     | 0.824204   |             672 | Unknown                      |                                | False       | False             |
+| CR540Q05VS          | numeric     | 0.823944   |               2 | Unknown                      |                                | False       | False             |
+| CR540Q05V           | numeric     | 0.823944   |               5 | Unknown                      |                                | False       | False             |
+| CR540Q05A           | numeric     | 0.823944   |              14 | Unknown                      |                                | False       | False             |
+| CR570Q02F           | numeric     | 0.823944   |             667 | Unknown                      |                                | False       | False             |
+| CR540Q05TT          | numeric     | 0.823944   |             674 | Unknown                      |                                | False       | False             |
+| CR570Q08VS          | numeric     | 0.823683   |               3 | Unknown                      |                                | False       | False             |
+| CR570Q08V           | numeric     | 0.823683   |               5 | Unknown                      |                                | False       | False             |
+| CR570Q08A           | numeric     | 0.823683   |              15 | Unknown                      |                                | False       | False             |
+| CR570Q08TT          | numeric     | 0.823683   |             672 | Unknown                      |                                | False       | False             |
+| CR456Q06VS          | numeric     | 0.823161   |               1 | Unknown                      |                                | True        | False             |
+| CR219Q01VS          | numeric     | 0.823161   |               2 | Unknown                      |                                | False       | True              |
+| CR456Q06V           | numeric     | 0.823161   |               3 | Unknown                      |                                | False       | False             |
+| CR219Q01V           | numeric     | 0.823161   |               7 | Unknown                      |                                | False       | False             |
+| CR219Q01A           | numeric     | 0.823161   |             165 | Unknown                      |                                | False       | False             |
+| CR456Q06A           | numeric     | 0.823161   |             170 | Unknown                      |                                | False       | False             |
+| CR456Q06TT          | numeric     | 0.823161   |             671 | Unknown                      |                                | False       | False             |
+| CR453Q05F           | numeric     | 0.823161   |             671 | Unknown                      |                                | False       | False             |
+| CR219Q01TT          | numeric     | 0.823161   |             676 | Unknown                      |                                | False       | False             |
+| CR570Q01F           | numeric     | 0.82264    |             676 | Unknown                      |                                | False       | False             |
+| CR460Q06VS          | numeric     | 0.822379   |               1 | Unknown                      |                                | True        | False             |
+| CR460Q06V           | numeric     | 0.822379   |               3 | Unknown                      |                                | False       | False             |
+| CR460Q06A           | numeric     | 0.822379   |              16 | Unknown                      |                                | False       | False             |
+| CR460Q06TT          | numeric     | 0.822379   |             678 | Unknown                      |                                | False       | False             |
+| CR569Q01VS          | numeric     | 0.822118   |               2 | Unknown                      |                                | False       | False             |
+| CR569Q01V           | numeric     | 0.822118   |               5 | Unknown                      |                                | False       | False             |
+| CR569Q01A           | numeric     | 0.822118   |              21 | Unknown                      |                                | False       | False             |
+| CR569Q01TT          | numeric     | 0.822118   |             681 | Unknown                      |                                | False       | False             |
+| CR542Q09VS          | numeric     | 0.821596   |               1 | Unknown                      |                                | True        | False             |
+| CR540Q04VS          | numeric     | 0.821596   |               2 | Unknown                      |                                | False       | False             |
+| CR563Q09VS          | numeric     | 0.821596   |               2 | Unknown                      |                                | False       | False             |
+| CR542Q09V           | numeric     | 0.821596   |               3 | Unknown                      |                                | False       | False             |
+| CR460Q05VS          | numeric     | 0.821596   |               3 | Unknown                      |                                | False       | False             |
+| CR540Q04V           | numeric     | 0.821596   |               5 | Unknown                      |                                | False       | False             |
+| CR563Q09V           | numeric     | 0.821596   |               5 | Unknown                      |                                | False       | False             |
+| CR460Q05V           | numeric     | 0.821596   |               5 | Unknown                      |                                | False       | False             |
+| CR460Q05A           | numeric     | 0.821596   |              15 | Unknown                      |                                | False       | False             |
+| CR563Q09A           | numeric     | 0.821596   |              57 | Unknown                      |                                | False       | False             |
+| CR542Q09A           | numeric     | 0.821596   |              63 | Unknown                      |                                | False       | False             |
+| CR540Q04A           | numeric     | 0.821596   |             168 | Unknown                      |                                | False       | False             |
+| CR460Q05TT          | numeric     | 0.821596   |             681 | Unknown                      |                                | False       | False             |
+| CR542Q09TT          | numeric     | 0.821596   |             683 | Unknown                      |                                | False       | False             |
+| CR563Q09TT          | numeric     | 0.821596   |             683 | Unknown                      |                                | False       | False             |
+| CR540Q04TT          | numeric     | 0.821596   |             684 | Unknown                      |                                | False       | False             |
+| CR570Q06VS          | numeric     | 0.821075   |               4 | Unknown                      |                                | False       | False             |
+| CR570Q06V           | numeric     | 0.821075   |               6 | Unknown                      |                                | False       | False             |
+| CR570Q06A           | numeric     | 0.821075   |              21 | Unknown                      |                                | False       | False             |
+| CR570Q06TT          | numeric     | 0.821075   |             686 | Unknown                      |                                | False       | False             |
+| CR564Q05VS          | numeric     | 0.820814   |               1 | Unknown                      |                                | True        | False             |
+| CR456Q02VS          | numeric     | 0.820814   |               2 | Unknown                      |                                | False       | False             |
+| CR564Q05V           | numeric     | 0.820814   |               4 | Unknown                      |                                | False       | False             |
+| CR456Q02V           | numeric     | 0.820814   |               4 | Unknown                      |                                | False       | False             |
+| CR456Q02A           | numeric     | 0.820814   |             149 | Unknown                      |                                | False       | False             |
+| CR564Q05A           | numeric     | 0.820814   |             182 | Unknown                      |                                | False       | False             |
+| CR456Q02TT          | numeric     | 0.820814   |             684 | Unknown                      |                                | False       | False             |
+| CR564Q05TT          | numeric     | 0.820814   |             685 | Unknown                      |                                | False       | False             |
+| CR542Q08VS          | numeric     | 0.820553   |               3 | Unknown                      |                                | False       | False             |
+| CR542Q08V           | numeric     | 0.820553   |               5 | Unknown                      |                                | False       | False             |
+| CR542Q08A           | numeric     | 0.820553   |              13 | Unknown                      |                                | False       | False             |
+| CR542Q08TT          | numeric     | 0.820553   |             686 | Unknown                      |                                | False       | False             |
+| CR540Q03VS          | numeric     | 0.820292   |               2 | Unknown                      |                                | False       | False             |
+| CR540Q03V           | numeric     | 0.820292   |               4 | Unknown                      |                                | False       | False             |
+| CR540Q03A           | numeric     | 0.820292   |              14 | Unknown                      |                                | False       | False             |
+| CR540Q03TT          | numeric     | 0.820292   |             688 | Unknown                      |                                | False       | False             |
+| CR456Q01VS          | numeric     | 0.81977    |               1 | Unknown                      |                                | True        | False             |
+| CR453Q01S           | numeric     | 0.81977    |               2 | Unknown                      |                                | False       | False             |
+| CR456Q01V           | numeric     | 0.81977    |               3 | Unknown                      |                                | False       | False             |
+| CR456Q01A           | numeric     | 0.81977    |              15 | Unknown                      |                                | False       | False             |
+| CR456Q01TT          | numeric     | 0.81977    |             688 | Unknown                      |                                | False       | False             |
+| CR564Q04VS          | numeric     | 0.81951    |               3 | Unknown                      |                                | False       | False             |
+| CR564Q04V           | numeric     | 0.81951    |               5 | Unknown                      |                                | False       | False             |
+| CR564Q04A           | numeric     | 0.81951    |              19 | Unknown                      |                                | False       | False             |
+| CR564Q04TT          | numeric     | 0.81951    |             689 | Unknown                      |                                | False       | False             |
+| CR570Q05VS          | numeric     | 0.818988   |               3 | Unknown                      |                                | False       | False             |
+| CR570Q05V           | numeric     | 0.818988   |               4 | Unknown                      |                                | False       | False             |
+| CR570Q05A           | numeric     | 0.818988   |              14 | Unknown                      |                                | False       | False             |
+| CR570Q05TT          | numeric     | 0.818988   |             691 | Unknown                      |                                | False       | False             |
+| CR540Q01VS          | numeric     | 0.818727   |               2 | Unknown                      |                                | False       | True              |
+| CR540Q01V           | numeric     | 0.818727   |               3 | Unknown                      |                                | False       | False             |
+| CR564Q03VS          | numeric     | 0.818727   |               3 | Unknown                      |                                | False       | False             |
+| CR564Q03V           | numeric     | 0.818727   |               5 | Unknown                      |                                | False       | False             |
+| CR540Q01A           | numeric     | 0.818727   |              19 | Unknown                      |                                | False       | False             |
+| CR564Q03A           | numeric     | 0.818727   |              19 | Unknown                      |                                | False       | False             |
+| CR564Q03TT          | numeric     | 0.818727   |             691 | Unknown                      |                                | False       | False             |
+| CR540Q01TT          | numeric     | 0.818727   |             693 | Unknown                      |                                | False       | False             |
+| CR542Q05VS          | numeric     | 0.818466   |               2 | Unknown                      |                                | False       | False             |
+| CR564Q02VS          | numeric     | 0.818466   |               2 | Unknown                      |                                | False       | False             |
+| CR564Q02V           | numeric     | 0.818466   |               4 | Unknown                      |                                | False       | False             |
+| CR542Q05V           | numeric     | 0.818466   |               6 | Unknown                      |                                | False       | False             |
+| CR564Q02A           | numeric     | 0.818466   |              15 | Unknown                      |                                | False       | False             |
+| CR542Q05A           | numeric     | 0.818466   |              17 | Unknown                      |                                | False       | False             |
+| CR564Q02TT          | numeric     | 0.818466   |             694 | Unknown                      |                                | False       | False             |
+| CR542Q05TT          | numeric     | 0.818466   |             695 | Unknown                      |                                | False       | False             |
+| CR543Q13VS          | numeric     | 0.817423   |               3 | Unknown                      |                                | False       | False             |
+| CR543Q13V           | numeric     | 0.817423   |               4 | Unknown                      |                                | False       | False             |
+| CR543Q13A           | numeric     | 0.817423   |              21 | Unknown                      |                                | False       | False             |
+| CR543Q13TT          | numeric     | 0.817423   |             689 | Unknown                      |                                | False       | False             |
+| CR453Q01F           | numeric     | 0.817423   |             698 | Unknown                      |                                | False       | False             |
+| CR543Q15VS          | numeric     | 0.817162   |               1 | Unknown                      |                                | True        | False             |
+| CR460Q01VS          | numeric     | 0.817162   |               2 | Unknown                      |                                | False       | True              |
+| CR543Q15V           | numeric     | 0.817162   |               3 | Unknown                      |                                | False       | False             |
+| CR460Q01V           | numeric     | 0.817162   |               3 | Unknown                      |                                | False       | False             |
+| CR543Q15A           | numeric     | 0.817162   |             165 | Unknown                      |                                | False       | False             |
+| CR460Q01A           | numeric     | 0.817162   |             232 | Unknown                      |                                | False       | False             |
+| CR460Q01TT          | numeric     | 0.817162   |             699 | Unknown                      |                                | False       | False             |
+| CR543Q15TT          | numeric     | 0.817162   |             700 | Unknown                      |                                | False       | False             |
+| CR564Q01VS          | numeric     | 0.816901   |               2 | Unknown                      |                                | False       | False             |
+| CR570Q04VS          | numeric     | 0.816901   |               2 | Unknown                      |                                | False       | False             |
+| CR564Q01V           | numeric     | 0.816901   |               3 | Unknown                      |                                | False       | False             |
+| CR570Q04V           | numeric     | 0.816901   |               4 | Unknown                      |                                | False       | False             |
+| CR564Q01A           | numeric     | 0.816901   |              20 | Unknown                      |                                | False       | False             |
+| CR570Q04A           | numeric     | 0.816901   |              24 | Unknown                      |                                | False       | False             |
+| CR570Q04TT          | numeric     | 0.816901   |             699 | Unknown                      |                                | False       | False             |
+| CR564Q01TT          | numeric     | 0.816901   |             700 | Unknown                      |                                | False       | False             |
+| CR542Q02VS          | numeric     | 0.816641   |               3 | Unknown                      |                                | False       | False             |
+| CR542Q02V           | numeric     | 0.816641   |               7 | Unknown                      |                                | False       | False             |
+| CR542Q02A           | numeric     | 0.816641   |             156 | Unknown                      |                                | False       | False             |
+| CR542Q02TT          | numeric     | 0.816641   |             702 | Unknown                      |                                | False       | False             |
+| CR570Q02VS          | numeric     | 0.81638    |               2 | Unknown                      |                                | False       | False             |
+| CR570Q02V           | numeric     | 0.81638    |               3 | Unknown                      |                                | False       | False             |
+| CR570Q02A           | numeric     | 0.81638    |              11 | Unknown                      |                                | False       | False             |
+| CR570Q02TT          | numeric     | 0.81638    |             696 | Unknown                      |                                | False       | False             |
+| CR543Q10V           | numeric     | 0.816119   |               3 | Unknown                      |                                | False       | False             |
+| CR543Q10VS          | numeric     | 0.816119   |               3 | Unknown                      |                                | False       | False             |
+| CR543Q10A           | numeric     | 0.816119   |              17 | Unknown                      |                                | False       | False             |
+| CR543Q10TT          | numeric     | 0.816119   |             704 | Unknown                      |                                | False       | False             |
+| CR543Q09VS          | numeric     | 0.815858   |               3 | Unknown                      |                                | False       | False             |
+| CR543Q09V           | numeric     | 0.815858   |               4 | Unknown                      |                                | False       | False             |
+| CR543Q09A           | numeric     | 0.815858   |              20 | Unknown                      |                                | False       | False             |
+| CR543Q09TT          | numeric     | 0.815858   |             703 | Unknown                      |                                | False       | False             |
+| CR543Q04VS          | numeric     | 0.815597   |               2 | Unknown                      |                                | False       | False             |
+| CR542Q01VS          | numeric     | 0.815597   |               3 | Unknown                      |                                | False       | False             |
+| CR543Q04V           | numeric     | 0.815597   |               3 | Unknown                      |                                | False       | False             |
+| CR542Q01V           | numeric     | 0.815597   |               6 | Unknown                      |                                | False       | False             |
+| CR543Q04A           | numeric     | 0.815597   |              14 | Unknown                      |                                | False       | False             |
+| CR542Q01A           | numeric     | 0.815597   |              19 | Unknown                      |                                | False       | False             |
+| CR543Q04TT          | numeric     | 0.815597   |             701 | Unknown                      |                                | False       | False             |
+| CR542Q01TT          | numeric     | 0.815597   |             707 | Unknown                      |                                | False       | False             |
+| CR453Q06VS          | numeric     | 0.815336   |               1 | Unknown                      |                                | True        | False             |
+| CR453Q06V           | numeric     | 0.815336   |               3 | Unknown                      |                                | False       | False             |
+| CR453Q06A           | numeric     | 0.815336   |             166 | Unknown                      |                                | False       | False             |
+| CR453Q06TT          | numeric     | 0.815336   |             706 | Unknown                      |                                | False       | False             |
+| CR543Q03VS          | numeric     | 0.815076   |               2 | Unknown                      |                                | False       | False             |
+| CR570Q01VS          | numeric     | 0.815076   |               2 | Unknown                      |                                | False       | False             |
+| CR570Q01V           | numeric     | 0.815076   |               3 | Unknown                      |                                | False       | False             |
+| CR543Q03V           | numeric     | 0.815076   |               4 | Unknown                      |                                | False       | False             |
+| CR570Q01A           | numeric     | 0.815076   |              15 | Unknown                      |                                | False       | False             |
+| CR543Q03A           | numeric     | 0.815076   |              16 | Unknown                      |                                | False       | False             |
+| CR543Q03TT          | numeric     | 0.815076   |             704 | Unknown                      |                                | False       | False             |
+| CR570Q01TT          | numeric     | 0.815076   |             708 | Unknown                      |                                | False       | False             |
+| CR453Q05VS          | numeric     | 0.814032   |               2 | Unknown                      |                                | False       | False             |
+| CR453Q05V           | numeric     | 0.814032   |               5 | Unknown                      |                                | False       | False             |
+| CR453Q05A           | numeric     | 0.814032   |              25 | Unknown                      |                                | False       | False             |
+| CR453Q05TT          | numeric     | 0.814032   |             712 | Unknown                      |                                | False       | False             |
+| CR453Q04VS          | numeric     | 0.812467   |               2 | Unknown                      |                                | False       | False             |
+| CR543Q01VS          | numeric     | 0.812467   |               2 | Unknown                      |                                | False       | False             |
+| CR543Q01V           | numeric     | 0.812467   |               4 | Unknown                      |                                | False       | False             |
+| CR453Q04V           | numeric     | 0.812467   |               5 | Unknown                      |                                | False       | False             |
+| CR543Q01A           | numeric     | 0.812467   |              17 | Unknown                      |                                | False       | False             |
+| CR453Q04A           | numeric     | 0.812467   |             216 | Unknown                      |                                | False       | False             |
+| CR543Q01TT          | numeric     | 0.812467   |             718 | Unknown                      |                                | False       | False             |
+| CR453Q04TT          | numeric     | 0.812467   |             719 | Unknown                      |                                | False       | False             |
+| CR453Q01VS          | numeric     | 0.81012    |               2 | Unknown                      |                                | False       | True              |
+| CR453Q01V           | numeric     | 0.81012    |               3 | Unknown                      |                                | False       | False             |
+| CR453Q01A           | numeric     | 0.81012    |              16 | Unknown                      |                                | False       | False             |
+| CR453Q01TT          | numeric     | 0.81012    |             724 | Unknown                      |                                | False       | False             |
+| CR590Q64S           | numeric     | 0.711789   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q53S           | numeric     | 0.70892    |               2 | Unknown                      |                                | False       | False             |
+| CR590Q54S           | numeric     | 0.706573   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q64TT          | numeric     | 0.70579    |            1081 | Unknown                      |                                | False       | False             |
+| CR590Q39S           | numeric     | 0.704747   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q66S           | numeric     | 0.703965   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q60S           | numeric     | 0.702921   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q51S           | numeric     | 0.702921   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q61S           | numeric     | 0.70266    |               2 | Unknown                      |                                | False       | False             |
+| CR590Q35S           | numeric     | 0.701356   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q58S           | numeric     | 0.701356   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q62S           | numeric     | 0.701356   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q32S           | numeric     | 0.700835   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q31S           | numeric     | 0.700052   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q52S           | numeric     | 0.699791   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q41S           | numeric     | 0.699791   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q43S           | numeric     | 0.698226   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q66TT          | numeric     | 0.698226   |            1103 | Unknown                      |                                | False       | False             |
+| CR590Q63S           | numeric     | 0.697966   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q24S           | numeric     | 0.697444   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q50S           | numeric     | 0.697183   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q57S           | numeric     | 0.695879   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q56S           | numeric     | 0.695879   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q46S           | numeric     | 0.695618   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q29S           | numeric     | 0.695618   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q33S           | numeric     | 0.695357   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q61TT          | numeric     | 0.694836   |            1096 | Unknown                      |                                | False       | False             |
+| CR590Q65S           | numeric     | 0.694575   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q62TT          | numeric     | 0.694575   |            1079 | Unknown                      |                                | False       | False             |
+| CR590Q59S           | numeric     | 0.694314   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q60TT          | numeric     | 0.694314   |            1110 | Unknown                      |                                | False       | False             |
+| CR590Q40S           | numeric     | 0.693792   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q53TT          | numeric     | 0.693532   |            1076 | Unknown                      |                                | False       | False             |
+| CR590Q27S           | numeric     | 0.693271   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q49S           | numeric     | 0.69301    |               2 | Unknown                      |                                | False       | False             |
+| CR590Q25S           | numeric     | 0.692488   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q28S           | numeric     | 0.692488   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q54TT          | numeric     | 0.692488   |            1099 | Unknown                      |                                | False       | False             |
+| CR590Q45S           | numeric     | 0.692227   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q36S           | numeric     | 0.692227   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q58TT          | numeric     | 0.692227   |            1085 | Unknown                      |                                | False       | False             |
+| CR590Q63TT          | numeric     | 0.691706   |            1109 | Unknown                      |                                | False       | False             |
+| CR590Q42S           | numeric     | 0.691184   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q30S           | numeric     | 0.691184   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q37S           | numeric     | 0.690402   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q55S           | numeric     | 0.690141   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q38S           | numeric     | 0.689619   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q65TT          | numeric     | 0.688837   |            1105 | Unknown                      |                                | False       | False             |
+| CR590Q34S           | numeric     | 0.68675    |               2 | Unknown                      |                                | False       | False             |
+| CR590Q44S           | numeric     | 0.68675    |               2 | Unknown                      |                                | False       | False             |
+| CR590Q51TT          | numeric     | 0.686489   |            1119 | Unknown                      |                                | False       | False             |
+| CR590Q47S           | numeric     | 0.685968   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q48S           | numeric     | 0.685968   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q26S           | numeric     | 0.685707   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q57TT          | numeric     | 0.685446   |            1134 | Unknown                      |                                | False       | False             |
+| CR590Q59TT          | numeric     | 0.685185   |            1104 | Unknown                      |                                | False       | False             |
+| CR590Q56TT          | numeric     | 0.684403   |            1150 | Unknown                      |                                | False       | False             |
+| CR590Q52TT          | numeric     | 0.683359   |            1168 | Unknown                      |                                | False       | False             |
+| CR590Q50TT          | numeric     | 0.678665   |            1165 | Unknown                      |                                | False       | False             |
+| CR590Q55TT          | numeric     | 0.67736    |            1141 | Unknown                      |                                | False       | False             |
+| CR590Q49TT          | numeric     | 0.673709   |            1158 | Unknown                      |                                | False       | False             |
+| CR590Q46TT          | numeric     | 0.670318   |            1170 | Unknown                      |                                | False       | False             |
+| CR590Q43TT          | numeric     | 0.667188   |            1165 | Unknown                      |                                | False       | False             |
+| CR590Q48TT          | numeric     | 0.665102   |            1175 | Unknown                      |                                | False       | False             |
+| CR590Q45TT          | numeric     | 0.664841   |            1137 | Unknown                      |                                | False       | False             |
+| CR590Q41TT          | numeric     | 0.66458    |            1196 | Unknown                      |                                | False       | False             |
+| CR590Q39TT          | numeric     | 0.664319   |            1193 | Unknown                      |                                | False       | False             |
+| CR590Q47TT          | numeric     | 0.663276   |            1166 | Unknown                      |                                | False       | False             |
+| CR590Q42TT          | numeric     | 0.658581   |            1198 | Unknown                      |                                | False       | False             |
+| CR220Q01S           | numeric     | 0.65832    |               2 | Unknown                      |                                | False       | False             |
+| CR590Q44TT          | numeric     | 0.657799   |            1244 | Unknown                      |                                | False       | False             |
+| CR590Q40TT          | numeric     | 0.656495   |            1168 | Unknown                      |                                | False       | False             |
+| CR590Q35TT          | numeric     | 0.653104   |            1158 | Unknown                      |                                | False       | False             |
+| CR590Q32TT          | numeric     | 0.648409   |            1256 | Unknown                      |                                | False       | False             |
+| CR590Q38TT          | numeric     | 0.647105   |            1246 | Unknown                      |                                | False       | False             |
+| CR590Q31TT          | numeric     | 0.646844   |            1209 | Unknown                      |                                | False       | False             |
+| CR590Q37TT          | numeric     | 0.646322   |            1243 | Unknown                      |                                | False       | False             |
+| CR590Q36TT          | numeric     | 0.64554    |            1258 | Unknown                      |                                | False       | False             |
+| CR590Q33TT          | numeric     | 0.643975   |            1237 | Unknown                      |                                | False       | False             |
+| CR560Q10S           | numeric     | 0.642149   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q29TT          | numeric     | 0.640845   |            1263 | Unknown                      |                                | False       | False             |
+| CR590Q24TT          | numeric     | 0.639019   |            1253 | Unknown                      |                                | False       | False             |
+| CR590Q17S           | numeric     | 0.638237   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q17TT          | numeric     | 0.638237   |            1270 | Unknown                      |                                | False       | False             |
+| CR590Q30TT          | numeric     | 0.637454   |            1235 | Unknown                      |                                | False       | False             |
+| CR590Q27TT          | numeric     | 0.636933   |            1272 | Unknown                      |                                | False       | False             |
+| CR590Q34TT          | numeric     | 0.636672   |            1260 | Unknown                      |                                | False       | False             |
+| CR590Q28TT          | numeric     | 0.636672   |            1263 | Unknown                      |                                | False       | False             |
+| CR590Q16S           | numeric     | 0.63615    |               2 | Unknown                      |                                | False       | False             |
+| CR590Q16TT          | numeric     | 0.63615    |            1301 | Unknown                      |                                | False       | False             |
+| CR590Q25TT          | numeric     | 0.635107   |            1265 | Unknown                      |                                | False       | False             |
+| CR590Q20S           | numeric     | 0.634846   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q20TT          | numeric     | 0.634846   |            1272 | Unknown                      |                                | False       | False             |
+| CR590Q07S           | numeric     | 0.634585   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q07TT          | numeric     | 0.634585   |            1251 | Unknown                      |                                | False       | False             |
+| CR590Q06S           | numeric     | 0.631977   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q06TT          | numeric     | 0.631977   |            1290 | Unknown                      |                                | False       | False             |
+| CR590Q21S           | numeric     | 0.631716   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q21TT          | numeric     | 0.631716   |            1270 | Unknown                      |                                | False       | False             |
+| CR590Q11S           | numeric     | 0.630673   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q11TT          | numeric     | 0.630673   |            1279 | Unknown                      |                                | False       | False             |
+| CR590Q13S           | numeric     | 0.630151   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q13TT          | numeric     | 0.630151   |            1289 | Unknown                      |                                | False       | False             |
+| CR590Q03S           | numeric     | 0.62989    |               2 | Unknown                      |                                | False       | False             |
+| CR590Q09S           | numeric     | 0.62989    |               2 | Unknown                      |                                | False       | False             |
+| CR590Q03TT          | numeric     | 0.62989    |            1258 | Unknown                      |                                | False       | False             |
+| CR590Q09TT          | numeric     | 0.62989    |            1268 | Unknown                      |                                | False       | False             |
+| CR590Q23S           | numeric     | 0.62963    |               2 | Unknown                      |                                | False       | False             |
+| CR590Q23TT          | numeric     | 0.62963    |            1267 | Unknown                      |                                | False       | False             |
+| CR590Q04S           | numeric     | 0.628586   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q04TT          | numeric     | 0.628586   |            1281 | Unknown                      |                                | False       | False             |
+| CR590Q26TT          | numeric     | 0.628586   |            1305 | Unknown                      |                                | False       | False             |
+| CR590Q14S           | numeric     | 0.628065   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q14TT          | numeric     | 0.628065   |            1325 | Unknown                      |                                | False       | False             |
+| CR590Q18S           | numeric     | 0.627804   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q08S           | numeric     | 0.627804   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q08TT          | numeric     | 0.627804   |            1251 | Unknown                      |                                | False       | False             |
+| CR590Q18TT          | numeric     | 0.627804   |            1273 | Unknown                      |                                | False       | False             |
+| CR590Q19S           | numeric     | 0.627282   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q19TT          | numeric     | 0.627282   |            1232 | Unknown                      |                                | False       | False             |
+| CR590Q15S           | numeric     | 0.626761   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q15TT          | numeric     | 0.626761   |            1320 | Unknown                      |                                | False       | False             |
+| CR590Q22S           | numeric     | 0.625456   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q22TT          | numeric     | 0.625456   |            1310 | Unknown                      |                                | False       | False             |
+| CR590Q10S           | numeric     | 0.625196   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q10TT          | numeric     | 0.625196   |            1298 | Unknown                      |                                | False       | False             |
+| CR590Q02S           | numeric     | 0.624935   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q02TT          | numeric     | 0.624935   |            1275 | Unknown                      |                                | False       | False             |
+| CR590Q01S           | numeric     | 0.620501   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q01TT          | numeric     | 0.620501   |            1285 | Unknown                      |                                | False       | False             |
+| CR590Q05S           | numeric     | 0.619979   |               2 | Unknown                      |                                | False       | False             |
+| CR590Q05TT          | numeric     | 0.619979   |            1338 | Unknown                      |                                | False       | False             |
+| CR560Q10F           | numeric     | 0.592593   |            1552 | Unknown                      |                                | False       | False             |
+| CR545Q04F           | numeric     | 0.550339   |            1702 | Unknown                      |                                | False       | False             |
+| CR220Q01F           | numeric     | 0.539384   |            1739 | Unknown                      |                                | False       | False             |
+| CR545Q03SB          | numeric     | 0.524778   |               2 | Unknown                      |                                | False       | False             |
+| CR545Q03SC          | numeric     | 0.524778   |               2 | Unknown                      |                                | False       | False             |
+| CR545Q03SD          | numeric     | 0.524517   |               2 | Unknown                      |                                | False       | False             |
+| CR545Q03SA          | numeric     | 0.521648   |               2 | Unknown                      |                                | False       | False             |
+| CR220Q02S           | numeric     | 0.520344   |               2 | Unknown                      |                                | False       | False             |
+| CR545Q07S           | numeric     | 0.520083   |               2 | Unknown                      |                                | False       | False             |
+| CR545Q06S           | numeric     | 0.519562   |               2 | Unknown                      |                                | False       | False             |
+| CR545Q06F           | numeric     | 0.518779   |            1815 | Unknown                      |                                | False       | False             |
+| CR545Q02S           | numeric     | 0.517997   |               2 | Unknown                      |                                | False       | False             |
+| CR545Q07F           | numeric     | 0.517736   |            1795 | Unknown                      |                                | False       | False             |
+| CR545Q02F           | numeric     | 0.51591    |            1846 | Unknown                      |                                | False       | False             |
+| CR545Q03S           | numeric     | 0.515649   |               3 | Unknown                      |                                | False       | False             |
+| CR559Q08F           | numeric     | 0.515649   |            1816 | Unknown                      |                                | False       | False             |
+| CR545Q03F           | numeric     | 0.514606   |            1837 | Unknown                      |                                | False       | False             |
+| CR560Q03S           | numeric     | 0.514345   |               2 | Unknown                      |                                | False       | False             |
+| CR545Q07VS          | numeric     | 0.513041   |               1 | Unknown                      |                                | True        | False             |
+| CR220Q05S           | numeric     | 0.513041   |               2 | Unknown                      |                                | False       | False             |
+| CR545Q06VS          | numeric     | 0.513041   |               4 | Unknown                      |                                | False       | False             |
+| CR545Q07V           | numeric     | 0.513041   |               5 | Unknown                      |                                | False       | False             |
+| CR545Q06V           | numeric     | 0.513041   |               8 | Unknown                      |                                | False       | False             |
+| CR545Q07A           | numeric     | 0.513041   |              18 | Unknown                      |                                | False       | False             |
+| CR545Q06A           | numeric     | 0.513041   |              25 | Unknown                      |                                | False       | False             |
+| CR545Q07TT          | numeric     | 0.513041   |            1835 | Unknown                      |                                | False       | False             |
+| CR545Q06TT          | numeric     | 0.513041   |            1847 | Unknown                      |                                | False       | False             |
+| CR220Q06S           | numeric     | 0.51278    |               2 | Unknown                      |                                | False       | False             |
+| CR560Q08S           | numeric     | 0.51252    |               2 | Unknown                      |                                | False       | False             |
+| CR545Q04VS          | numeric     | 0.512259   |               3 | Unknown                      |                                | False       | False             |
+| CR545Q04V           | numeric     | 0.512259   |               7 | Unknown                      |                                | False       | False             |
+| CR545Q04A           | numeric     | 0.512259   |             455 | Unknown                      |                                | False       | False             |
+| CR560Q03F           | numeric     | 0.512259   |            1856 | Unknown                      |                                | False       | False             |
+| CR545Q04TT          | numeric     | 0.512259   |            1866 | Unknown                      |                                | False       | False             |
+| CR220Q02F           | numeric     | 0.511737   |            1821 | Unknown                      |                                | False       | False             |
+| CR220Q04S           | numeric     | 0.511476   |               2 | Unknown                      |                                | False       | False             |
+| CR545Q03VS          | numeric     | 0.511476   |               3 | Unknown                      |                                | False       | False             |
+| CR545Q03V           | numeric     | 0.511476   |               7 | Unknown                      |                                | False       | False             |
+| CR545Q03A           | numeric     | 0.511476   |              39 | Unknown                      |                                | False       | False             |
+| CR545Q03TT          | numeric     | 0.511476   |            1866 | Unknown                      |                                | False       | False             |
+| CR560Q06S           | numeric     | 0.511215   |               2 | Unknown                      |                                | False       | False             |
+| CR545Q02VS          | numeric     | 0.510955   |               3 | Unknown                      |                                | False       | False             |
+| CR545Q02V           | numeric     | 0.510955   |               6 | Unknown                      |                                | False       | False             |
+| CR545Q02A           | numeric     | 0.510955   |              35 | Unknown                      |                                | False       | False             |
+| CR545Q02TT          | numeric     | 0.510955   |            1868 | Unknown                      |                                | False       | False             |
+| CR220Q05F           | numeric     | 0.510694   |            1832 | Unknown                      |                                | False       | False             |
+| CR560Q06F           | numeric     | 0.50965    |            1849 | Unknown                      |                                | False       | False             |
+| CR220Q04F           | numeric     | 0.50939    |            1848 | Unknown                      |                                | False       | False             |
+| CR560Q08F           | numeric     | 0.508868   |            1860 | Unknown                      |                                | False       | False             |
+| CR220Q06F           | numeric     | 0.508086   |            1844 | Unknown                      |                                | False       | False             |
+| CR560Q08VS          | numeric     | 0.503652   |               2 | Unknown                      |                                | True        | False             |
+| CR560Q03VS          | numeric     | 0.503652   |               3 | Unknown                      |                                | False       | False             |
+| CR560Q06VS          | numeric     | 0.503652   |               4 | Unknown                      |                                | False       | False             |
+| CR560Q08V           | numeric     | 0.503652   |               4 | Unknown                      |                                | False       | False             |
+| CR560Q03V           | numeric     | 0.503652   |               7 | Unknown                      |                                | False       | False             |
+| CR560Q06V           | numeric     | 0.503652   |               7 | Unknown                      |                                | False       | False             |
+| CR560Q06A           | numeric     | 0.503652   |              25 | Unknown                      |                                | False       | False             |
+| CR560Q08A           | numeric     | 0.503652   |              29 | Unknown                      |                                | False       | False             |
+| CR560Q03A           | numeric     | 0.503652   |              34 | Unknown                      |                                | False       | False             |
+| CR560Q06TT          | numeric     | 0.503652   |            1894 | Unknown                      |                                | False       | False             |
+| CR560Q08TT          | numeric     | 0.503652   |            1894 | Unknown                      |                                | False       | False             |
+| CR560Q03TT          | numeric     | 0.503652   |            1899 | Unknown                      |                                | False       | False             |
+| CR560Q10VS          | numeric     | 0.503391   |               2 | Unknown                      |                                | True        | False             |
+| CR560Q10V           | numeric     | 0.503391   |               6 | Unknown                      |                                | False       | False             |
+| CR560Q10A           | numeric     | 0.503391   |              66 | Unknown                      |                                | False       | False             |
+| CR560Q10TT          | numeric     | 0.503391   |            1898 | Unknown                      |                                | False       | False             |
+| CR559Q06S           | numeric     | 0.5        |               2 | Unknown                      |                                | False       | False             |
+| CR220Q06VS          | numeric     | 0.498696   |               1 | Unknown                      |                                | True        | False             |
+| CR220Q05VS          | numeric     | 0.498696   |               3 | Unknown                      |                                | False       | False             |
+| CR220Q06V           | numeric     | 0.498696   |               4 | Unknown                      |                                | False       | False             |
+| CR220Q05V           | numeric     | 0.498696   |               8 | Unknown                      |                                | False       | False             |
+| CR220Q05A           | numeric     | 0.498696   |              19 | Unknown                      |                                | False       | False             |
+| CR220Q06A           | numeric     | 0.498696   |              22 | Unknown                      |                                | False       | False             |
+| CR220Q05TT          | numeric     | 0.498696   |            1898 | Unknown                      |                                | False       | False             |
+| CR220Q06TT          | numeric     | 0.498696   |            1900 | Unknown                      |                                | False       | False             |
+| CR220Q01VS          | numeric     | 0.498174   |               3 | Unknown                      |                                | False       | False             |
+| CR220Q04VS          | numeric     | 0.498174   |               4 | Unknown                      |                                | False       | False             |
+| CR220Q04V           | numeric     | 0.498174   |              10 | Unknown                      |                                | False       | False             |
+| CR220Q01V           | numeric     | 0.498174   |              15 | Unknown                      |                                | False       | False             |
+| CR220Q04A           | numeric     | 0.498174   |              30 | Unknown                      |                                | False       | False             |
+| CR220Q01A           | numeric     | 0.498174   |             111 | Unknown                      |                                | False       | False             |
+| CR220Q04TT          | numeric     | 0.498174   |            1906 | Unknown                      |                                | False       | False             |
+| CR220Q01TT          | numeric     | 0.498174   |            1919 | Unknown                      |                                | False       | False             |
+| CR220Q02VS          | numeric     | 0.497913   |               3 | Unknown                      |                                | False       | False             |
+| CR220Q02V           | numeric     | 0.497913   |              12 | Unknown                      |                                | False       | False             |
+| CR220Q02A           | numeric     | 0.497913   |              32 | Unknown                      |                                | False       | False             |
+| CR220Q02TT          | numeric     | 0.497913   |            1913 | Unknown                      |                                | False       | False             |
+| CR559Q06F           | numeric     | 0.497653   |            1902 | Unknown                      |                                | False       | False             |
+| CR559Q03S           | numeric     | 0.497131   |               2 | Unknown                      |                                | False       | False             |
+| CR559Q04S           | numeric     | 0.496609   |               2 | Unknown                      |                                | False       | False             |
+| CR559Q04F           | numeric     | 0.495827   |            1895 | Unknown                      |                                | False       | False             |
+| CR559Q03F           | numeric     | 0.495827   |            1909 | Unknown                      |                                | False       | False             |
+| CR559Q01S           | numeric     | 0.494784   |               2 | Unknown                      |                                | False       | False             |
+| CR559Q01F           | numeric     | 0.494001   |            1930 | Unknown                      |                                | False       | False             |
+| CR559Q08VS          | numeric     | 0.490089   |               2 | Unknown                      |                                | True        | False             |
+| CR559Q03VS          | numeric     | 0.490089   |               3 | Unknown                      |                                | False       | False             |
+| CR559Q08V           | numeric     | 0.490089   |               3 | Unknown                      |                                | False       | False             |
+| CR559Q03V           | numeric     | 0.490089   |               6 | Unknown                      |                                | False       | False             |
+| CR559Q03A           | numeric     | 0.490089   |              23 | Unknown                      |                                | False       | False             |
+| CR559Q08A           | numeric     | 0.490089   |             490 | Unknown                      |                                | False       | False             |
+| CR559Q03TT          | numeric     | 0.490089   |            1940 | Unknown                      |                                | False       | False             |
+| CR559Q08TT          | numeric     | 0.490089   |            1953 | Unknown                      |                                | False       | False             |
+| CR559Q01VS          | numeric     | 0.489828   |               2 | Unknown                      |                                | False       | False             |
+| CR559Q04VS          | numeric     | 0.489828   |               3 | Unknown                      |                                | False       | False             |
+| CR559Q06VS          | numeric     | 0.489828   |               3 | Unknown                      |                                | False       | False             |
+| CR559Q06V           | numeric     | 0.489828   |               5 | Unknown                      |                                | False       | False             |
+| CR559Q01V           | numeric     | 0.489828   |               6 | Unknown                      |                                | False       | False             |
+| CR559Q04V           | numeric     | 0.489828   |               6 | Unknown                      |                                | False       | False             |
+| CR559Q04A           | numeric     | 0.489828   |              19 | Unknown                      |                                | False       | False             |
+| CR559Q06A           | numeric     | 0.489828   |              26 | Unknown                      |                                | False       | False             |
+| CR559Q01A           | numeric     | 0.489828   |              33 | Unknown                      |                                | False       | False             |
+| CR559Q04TT          | numeric     | 0.489828   |            1941 | Unknown                      |                                | False       | False             |
+| CR559Q06TT          | numeric     | 0.489828   |            1943 | Unknown                      |                                | False       | False             |
+| CR559Q01TT          | numeric     | 0.489828   |            1949 | Unknown                      |                                | False       | False             |
+| HISCED              | numeric     | 0.00678143 |               8 | Unknown                      |                                | False       | False             |
+| ST004D01T           | numeric     | 0          |               2 | Unknown                      |                                | False       | False             |
+| Creative_Resilience | numeric     | 0          |               2 | Criatividade                 |                                | False       | False             |
+| Status              | categorical | 0          |               2 | Socioeconômicas/Educacionais |                                | False       | False             |
+| Grupo_ESCS          | numeric     | 0          |               4 | Socioeconômicas/Educacionais |                                | False       | False             |
+| CRT_SCORE           | numeric     | 0          |            1044 | Criatividade                 |                                | False       | False             |
+| ICTRES              | numeric     | 0          |            1561 | Unknown                      |                                | False       | False             |
+| W_FSTUWT            | numeric     | 0          |            1642 | Pesos amostrais              |                                | False       | False             |
+| HOMEPOS             | numeric     | 0          |            3594 | Socioeconômicas/Educacionais |                                | False       | False             |
+| ESCS                | numeric     | 0          |            3680 | Socioeconômicas/Educacionais |                                | False       | False             |
+| CNTSTUID            | numeric     | 0          |            3834 | Unknown                      |                                | False       | False             |
