@@ -7,6 +7,8 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 
+from src.utils.markdown import df_to_markdown
+
 
 @dataclass
 class LeakageCandidate:
@@ -146,7 +148,7 @@ def run_leakage_audit(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
     cand_csv = out_tables / "leakage_candidates.csv"
     cand_md = ""
     if not res.empty:
-        cand_md = res.head(50).to_markdown(index=False)
+        cand_md = df_to_markdown(res.head(50))
 
     audit_md = []
     audit_md.append("# Leakage Audit (gate inicial)\n\n")
@@ -170,5 +172,4 @@ def run_leakage_audit(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
             "Leakage gate falhou: variáveis CRÍTICAS encontradas (não previstas/inerentes ao target). "
             + ", ".join(crit["nome"].head(20).tolist())
         )
-
 

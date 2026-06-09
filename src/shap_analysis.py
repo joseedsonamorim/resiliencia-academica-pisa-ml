@@ -6,6 +6,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
+from src.utils.markdown import df_to_markdown
 from src.utils.pipeline_data import get_target_series, select_feature_columns
 from src.utils.seed import set_global_seed
 
@@ -119,7 +120,7 @@ def run_shap_analysis(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
         f"- Dataset: `{csv_path.name}`\n",
         f"- Target: **{target_key}**\n",
         f"- Método: `{method}`\n\n",
-        importance_df.head(25).to_markdown(index=False),
+        df_to_markdown(importance_df.head(25)),
         "\n",
     ]
     (out_reports / "shap_report.md").write_text("".join(md), encoding="utf-8")

@@ -1,6 +1,9 @@
 {
   "target_key": "A",
-  "best_model": "random_forest",
+  "best_model": "xgboost_tuned",
+  "selection_metric": "cv_roc_auc_mean",
+  "best_cv_roc_auc_mean": 0.9235847247599905,
+  "best_threshold": 0.10999999999999999,
   "feature_cols": [
     "CR220Q01TT",
     "CR559Q08TT",
@@ -56,5 +59,8 @@
   ],
   "n_train": 3067,
   "n_test": 767,
-  "dataset": "pisa_brasil_estudo_limpo.csv"
+  "cv_folds": 5,
+  "cv_repeats": 3,
+  "dataset": "pisa_brasil_estudo_limpo.csv",
+  "used_sample_weights": true
 }

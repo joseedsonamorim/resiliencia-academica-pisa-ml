@@ -9,6 +9,7 @@ import pandas as pd
 from sklearn.calibration import calibration_curve
 from sklearn.metrics import brier_score_loss, roc_auc_score
 
+from src.utils.markdown import df_to_markdown
 from src.utils.pipeline_data import get_target_series, select_feature_columns
 from src.utils.seed import set_global_seed
 
@@ -96,7 +97,7 @@ def run_robustness(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
         f"- Target: **{target_key}**\n",
         f"- Bootstrap iterations: {n_boot}\n",
         f"- Brier score: {brier:.4f}\n\n",
-        boot_df.to_markdown(index=False),
+        df_to_markdown(boot_df),
         "\n",
     ]
     (out_reports / "robustness_report.md").write_text("".join(md), encoding="utf-8")

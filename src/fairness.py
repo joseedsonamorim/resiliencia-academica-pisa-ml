@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
 
+from src.utils.markdown import df_to_markdown
 from src.utils.pipeline_data import find_sensitive_columns, get_sample_weights, get_target_series
 from src.utils.seed import set_global_seed
 
@@ -80,7 +81,7 @@ def run_fairness(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
         f"- Dataset: `{csv_path.name}`\n",
         f"- Target: **{target_key}**\n",
         f"- Variáveis sensíveis analisadas: {', '.join(sensitive_cols)}\n\n",
-        fair_df.head(40).to_markdown(index=False),
+        df_to_markdown(fair_df.head(40)),
         "\n",
     ]
     (out_reports / "fairness_report.md").write_text("".join(md), encoding="utf-8")

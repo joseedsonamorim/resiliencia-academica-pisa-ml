@@ -4,6 +4,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from src.utils.markdown import df_to_markdown
+
 
 def run_eda(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
     """Fase 5 — EDA completa (aproximação robusta para dataset tabular grande).
@@ -55,7 +57,7 @@ def run_eda(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
     md.append(f"- Duplicatas (linhas inteiras): {dupes}\n\n")
 
     md.append("## Missingness (top 25 colunas)\n\n")
-    md.append(missing_ratio.head(25).to_frame("missing_ratio").to_markdown())
+    md.append(df_to_markdown(missing_ratio.head(25).to_frame("missing_ratio"), index=True))
     md.append("\n\n")
 
     md.append("## Descritivas (numéricas)\n\n")
@@ -149,7 +151,7 @@ def run_eda(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
     outlier_df.to_csv(outlier_path, index=False)
 
     md.append("## Outliers (IQR) — top 20\n\n")
-    md.append(outlier_df.to_markdown(index=False))
+    md.append(df_to_markdown(outlier_df))
     md.append("\n\n")
 
     md.append("## Target distribution (se existir no dataframe)\n\n")
@@ -158,7 +160,7 @@ def run_eda(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
         for c in target_cols:
             y = pd.to_numeric(df[c], errors="coerce")
             rows.append({"target_col": c, "mean": float(y.mean()), "sum": int(y.sum())})
-        md.append(pd.DataFrame(rows).to_markdown(index=False))
+        md.append(df_to_markdown(pd.DataFrame(rows)))
         md.append("\n\n")
     else:
         md.append(
@@ -176,4 +178,3 @@ def run_eda(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
     md.append("\n> Próximas etapas: Fase 6 (perfil dos resilientes) e Fase 7 (clusterização).\n")
 
     report_path.write_text("".join(md), encoding="utf-8")
-

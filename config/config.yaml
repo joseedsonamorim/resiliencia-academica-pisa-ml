@@ -45,6 +45,11 @@ modeling:
   max_missing_ratio: 0.5
   test_size: 0.2
   cv_folds: 5
+  cv_repeats: 3
+  hyperparameter_search: true
+  search_top_k: 3
+  search_n_iter: 8
+  n_bootstrap_holdout: 500
 
 shap:
   max_rows: 800
@@ -69,4 +74,3 @@ fairness:
 weighted_analysis:
   sample_weight_candidates:
     - W_FSTUWT
-

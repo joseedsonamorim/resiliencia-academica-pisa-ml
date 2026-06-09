@@ -4,6 +4,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from src.utils.markdown import df_to_markdown
+
 
 def make_data_dictionary(df: pd.DataFrame, out_path: Path, max_rows: int | None = None) -> None:
     rows = []
@@ -39,5 +41,4 @@ def make_data_dictionary(df: pd.DataFrame, out_path: Path, max_rows: int | None 
         dd = dd.head(max_rows)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(dd.to_markdown(index=False), encoding="utf-8")
-
+    out_path.write_text(df_to_markdown(dd), encoding="utf-8")

@@ -5,6 +5,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from src.utils.markdown import df_to_markdown
+
 
 def _select_targets(df: pd.DataFrame) -> dict[str, pd.Series]:
     # Prefer explicit target columns already present
@@ -141,7 +143,7 @@ def run_resilient_profile(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
     md.append(f"- Dataset: `{csv_path.name}`\n")
     md.append(f"- Target usada para perfil: `{y_key}`\n")
     md.append("\n## Top diferenças (média) — resilient vs não\n\n")
-    md.append(pd.DataFrame(rows).head(25).to_markdown(index=False))
+    md.append(df_to_markdown(pd.DataFrame(rows).head(25)))
     md.append("\n")
 
     md.append("\n## Figuras\n\n")
@@ -149,5 +151,4 @@ def run_resilient_profile(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
     md.append(f"- Heatmap: `outputs/figures/resilient_profile/resilient_profile_heatmap.png`\n")
 
     (out_reports / "resilient_profile.md").write_text("".join(md), encoding="utf-8")
-
 

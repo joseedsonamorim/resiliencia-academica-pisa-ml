@@ -8,6 +8,7 @@ import pandas as pd
 
 from src.utils.seed import set_global_seed
 from src.utils.io import ensure_parent
+from src.utils.markdown import df_to_markdown
 
 
 def _infer_type(series: pd.Series) -> str:
@@ -103,13 +104,7 @@ def run_data_audit(cfg: dict, csv_path: Path) -> None:
     # save dataset_inventory.md
     inv_md_path = out_reports / "dataset_inventory.md"
     inv_sorted = inv.sort_values(["missing", "cardinalidade"], ascending=[False, True])
-    # pandas.to_markdown requires optional dependency `tabulate`.
-    # If unavailable, fallback to a simple CSV/tsv-like markdown.
-    try:
-        inv_md = inv_sorted.to_markdown(index=False)
-    except ImportError:
-        inv_md = inv_sorted.head(500).to_csv(index=False, sep="|")
-        inv_md = "(fallback) " + inv_md
+    inv_md = df_to_markdown(inv_sorted)
 
     ensure_parent(inv_md_path)
     inv_md_path.write_text(inv_md, encoding="utf-8")
@@ -126,7 +121,7 @@ def run_data_audit(cfg: dict, csv_path: Path) -> None:
         f"- Colunas: {df.shape[1]}\n",
         f"- Duplicatas (linhas inteiras): {dupes}\n",
         "\n## Missing (top 15)\n",
-        missing_top.to_frame("missing_ratio").to_markdown(),
+        df_to_markdown(missing_top.to_frame("missing_ratio"), index=True),
         "\n## Heurísticas\n",
         f"- Possíveis IDs: {id_candidates[:30]}\n",
         f"- Possíveis pesos amostrais: {weight_candidates[:30]}\n",
@@ -167,4 +162,3 @@ def run_data_audit(cfg: dict, csv_path: Path) -> None:
     except Exception:
         # Figures are best-effort.
         pass
-

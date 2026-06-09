@@ -10,6 +10,7 @@ from sklearn.metrics import calinski_harabasz_score, davies_bouldin_score, silho
 from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import StandardScaler
 
+from src.utils.markdown import df_to_markdown
 from src.utils.pipeline_data import select_feature_columns
 from src.utils.seed import set_global_seed
 
@@ -80,7 +81,7 @@ def run_clusterer(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
         f"- k / componentes: {n_clusters}\n",
         f"- Melhor algoritmo (silhouette): **{best}**\n\n",
         "## Métricas\n\n",
-        metrics_df.to_markdown(index=False),
+        df_to_markdown(metrics_df),
         "\n\n## Artefatos\n\n",
         "- `outputs/tables/clusterer_metrics.csv`\n",
         "- `outputs/tables/clusterer_labels.csv`\n",

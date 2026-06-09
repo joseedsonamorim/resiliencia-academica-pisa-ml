@@ -6,6 +6,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from src.utils.markdown import df_to_markdown
+
 
 @dataclass
 class TargetDef:
@@ -103,10 +105,7 @@ def run_target_comparison(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
         "\n## Estatísticas\n",
     ]
 
-    try:
-        comp_md = comp.to_markdown(index=False)
-    except Exception:
-        comp_md = comp.head(50).to_csv(index=False)
+    comp_md = df_to_markdown(comp)
 
     notes = [
         "\n\n## Notas das definições\n",
@@ -118,4 +117,3 @@ def run_target_comparison(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
 
     out_path = out_reports / "target_comparison.md"
     out_path.write_text("".join(header) + comp_md + "".join(notes), encoding="utf-8")
-

@@ -7,6 +7,8 @@ from typing import Iterable
 
 import pandas as pd
 
+from src.utils.markdown import df_to_markdown
+
 
 @dataclass
 class VarRecord:
@@ -104,6 +106,10 @@ def run_variable_discovery(cfg: dict, df: pd.DataFrame, out_dir: Path | None = N
     (tables / "variable_catalog.csv").write_text(catalog.to_csv(index=False), encoding="utf-8")
 
     top = catalog.groupby("familia").size().sort_values(ascending=False).head(30)
-    md = ["# Variable Catalog (heurístico)\n\n", "## Top famílias\n", top.to_frame("qtd").to_markdown(), "\n"]
+    md = [
+        "# Variable Catalog (heurístico)\n\n",
+        "## Top famílias\n",
+        df_to_markdown(top.to_frame("qtd"), index=True),
+        "\n",
+    ]
     (reports / "variable_catalog.md").write_text("".join(md), encoding="utf-8")
-
