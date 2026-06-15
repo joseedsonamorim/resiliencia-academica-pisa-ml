@@ -37,8 +37,99 @@ analysis:
     high_corr_abs: 0.95
 
 clustering:
-  n_clusters: 4
-  max_features: 50
+  analysis_mode: "full_population"  # full_population | vulnerable_only
+
+  # grid search
+  n_clusters_min: 2
+  n_clusters_max: 10
+
+  max_features: 80
+  pca_variance_target: 0.85
+  collinearity_threshold: 0.95
+
+  # bootstrap stability
+  bootstrap_iterations: 100
+  bootstrap_sample_size: 300
+  stability_top_n: 6
+
+  algorithms:
+    - agglomerative_ward
+    - gmm
+    - spectral
+    - birch
+    - hdbscan
+
+  # Multicriteria score for the final choice (as specified in the refactor request)
+  cluster_score_weights:
+    silhouette: 0.30
+    calinski_harabasz: 0.20
+    davies_bouldin: -0.15
+    stability: 0.35
+
+  # interpretability / naming
+  cluster_profile_top_above: 10
+  cluster_profile_top_below: 10
+  cluster_name_top_variables: 3
+
+  feature_groups:
+
+    accesso_tecnologico:
+      - "ict"
+      - "digital"
+      - "computer"
+      - "internet"
+      - "device"
+    recursos_domesticos:
+      - "homepos"
+      - "home"
+      - "book"
+      - "desk"
+      - "quiet"
+      - "study"
+    apoio_familiar:
+      - "parent"
+      - "mother"
+      - "father"
+      - "family"
+      - "support"
+      - "encour"
+    clima_escolar:
+      - "school"
+      - "teacher"
+      - "class"
+      - "bully"
+      - "safety"
+      - "discip"
+    pertencimento:
+      - "belong"
+      - "included"
+      - "accepted"
+      - "satisf"
+    motivacao:
+      - "motiv"
+      - "interest"
+      - "effort"
+      - "goal"
+      - "persist"
+    autoeficacia:
+      - "self"
+      - "effic"
+      - "confid"
+      - "capab"
+    ansiedade:
+      - "anx"
+      - "worry"
+      - "nerv"
+      - "stress"
+    indicadores_processuais:
+      - "process"
+      - "timing"
+      - "time"
+      - "attempt"
+      - "engag"
+    engajamento_tarefas_criativas:
+      - "^CR590"
+      - "CR590Q"
 
 modeling:
   max_features: 80

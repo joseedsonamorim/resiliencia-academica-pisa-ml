@@ -397,9 +397,11 @@ tabs = st.tabs(
         "Métodos testados",
         "Decisão e probabilidades",
         "Explicações",
+        "Perfis de Resiliência Criativa",
         "Relatórios técnicos",
     ]
 )
+
 
 with tabs[0]:
     st.markdown('<div class="section-label">Leitura rápida</div>', unsafe_allow_html=True)
@@ -560,6 +562,7 @@ with tabs[3]:
 
 with tabs[4]:
     st.subheader("Quais sinais ajudam a explicar o resultado")
+
     _reading_note(
         "Importância",
         "A importância indica quais variáveis mais contribuíram para separar os grupos no modelo; ela não prova causalidade.",
@@ -591,6 +594,51 @@ with tabs[4]:
         st.info("A etapa de fairness ainda não gerou tabela.")
 
 with tabs[5]:
+    # Perfis de Resiliência Criativa (clusterização person-centered)
+    st.subheader("Perfis de Resiliência Criativa")
+
+    ranking = _csv("clustering_model_comparison.csv")
+    stability = _csv("cluster_stability.csv")
+    profiles = _csv("cluster_profiles_interpretable.csv")
+    assoc = _csv("cluster_resilience_association.csv")
+
+    st.markdown("### Ranking e escolha do melhor modelo")
+    if ranking is not None and not ranking.empty:
+        st.dataframe(ranking.head(20), use_container_width=True, hide_index=True)
+        if "cluster_score" in ranking.columns and len(ranking) > 0:
+            st.caption("A seleção usa score multicritério (qualidade + estabilidade), não apenas silhouette.")
+    else:
+        st.info("`outputs/tables/clustering_model_comparison.csv` não encontrado.")
+
+    st.markdown("### Estabilidade dos clusters (bootstrap)")
+    if stability is not None and not stability.empty:
+        st.dataframe(stability.head(20), use_container_width=True, hide_index=True)
+    else:
+        st.info("`outputs/tables/cluster_stability.csv` não encontrado.")
+
+    st.markdown("### Associações cluster × resiliência criativa")
+    if assoc is not None and not assoc.empty:
+        st.dataframe(assoc, use_container_width=True, hide_index=True)
+    else:
+        st.info("`outputs/tables/cluster_resilience_association.csv` não encontrado.")
+
+    st.markdown("### Perfis interpretáveis")
+    if profiles is not None and not profiles.empty:
+        st.dataframe(profiles.head(60), use_container_width=True, hide_index=True)
+    else:
+        st.info("`outputs/tables/cluster_profiles_interpretable.csv` não encontrado.")
+
+    # Imagens obrigatórias
+    st.markdown("### Visualizações (clusterização)")
+    _render_image(FIGURES / "clustering" / "scree_plot.png", "Scree plot (PCA)")
+    _render_image(FIGURES / "clustering" / "cumulative_variance.png", "Variância acumulada (PCA)")
+    _render_image(FIGURES / "clustering" / "cluster_pca.png", "PCA 2D por cluster")
+    _render_image(FIGURES / "clustering" / "cluster_umap.png", "UMAP 2D por cluster")
+    _render_image(FIGURES / "clustering" / "cluster_heatmap.png", "Heatmap dos perfis")
+    _render_image(FIGURES / "clustering" / "cluster_radar.png", "Radar dos perfis")
+    _render_image(FIGURES / "clustering" / "cluster_resilience_distribution.png", "Distribuição de resiliência por perfil")
+
+with tabs[6]:
     st.subheader("Relatórios técnicos e rastreabilidade")
     _reading_note(
         "Rastreabilidade",
