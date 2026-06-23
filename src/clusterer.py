@@ -1153,9 +1153,14 @@ def run_clusterer(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
     stability_top_n = int(cfg.get("clustering", {}).get("stability_top_n", 6))
 
     # grid (Etapa 3)
+    # OPT-5: HDBSCAN não usa n_clusters; executar apenas uma vez por dataset
     candidates: list[ModelCandidate] = []
     for algorithm in algorithms:
-        for k in range(k_min, k_max + 1):
+        k_range = range(k_min, k_max + 1)
+        for k in k_range:
+            # OPT-5: algoritmos que ignoram n_clusters só executam na primeira iteração
+            if algorithm in ("hdbscan",) and k != k_min:
+                continue
             try:
                 model, labels, note = _fit_candidate(algorithm, k, x_pca, seed)
                 quality = _cluster_metrics(x_pca, labels, model)
@@ -1194,11 +1199,21 @@ def run_clusterer(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
     comparison_df = pd.DataFrame(comp_rows)
     comparison_df["algorithm"] = comparison_df["algorithm"].astype(str)
 
-    # compute stability on top-N (Etapa 5)
+    # SR-6: compute stability SOMENTE nos top-N candidatos por qualidade (silhouette)
+    # Bug anterior: usava os N primeiros da lista (ordem de inserção no grid),
+    # ignorando a qualidade dos clusters. Agora os top-N são selecionados por silhouette.
+    valid_cands = [
+        c for c in candidates
+        if c.model is not None and np.isfinite(c.quality.get("silhouette", np.nan))
+    ]
+    top_for_stability = sorted(
+        valid_cands,
+        key=lambda c: c.quality.get("silhouette", -np.inf),
+        reverse=True,
+    )[:stability_top_n]
+
     stability_rows: list[dict[str, object]] = []
-    for c in candidates[:stability_top_n]:
-        if c.model is None:
-            continue
+    for c in top_for_stability:
         s = _stability_for_candidate(c, x_pca, seed, n_bootstrap, bootstrap_sample)
         stability_rows.append({"algorithm": c.algorithm, "k": c.n_clusters, **s})
 

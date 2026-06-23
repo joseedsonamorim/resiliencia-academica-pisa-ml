@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -14,8 +15,17 @@ _HARD_EXCLUDE_SUBSTR = (
     "creative_resilience",
     "crt_score",
     "grupo_escs",
+    # Itens brutos de tarefas criativas: componentes diretos do CRT_SCORE.
+    # Incluí-los como features configura leakage indireto sobre o target.
+    "cr590q",  # itens da tarefa criativa CR590
+    "cr591q",  # itens da tarefa criativa CR591
+    "cr592q",  # itens da tarefa criativa CR592
 )
 _HARD_EXCLUDE_EXACT = {"w_fstuwt"}
+
+# Padrão regex para itens brutos de tarefas criativas PISA (CR\d{3}Q...)
+# Captura variáveis no padrão CR590Q01S, CR591Q02C, etc.
+_CR_ITEM_RE = re.compile(r'^cr\d{3}q', re.IGNORECASE)
 
 
 def load_dataframe(csv_path: Path) -> pd.DataFrame:
@@ -39,25 +49,27 @@ def get_target_key(cfg: dict) -> str:
     return str(cfg.get("analysis", {}).get("target_profile_key", "A"))
 
 
-def build_targets_dict(df: pd.DataFrame) -> dict[str, pd.Series]:
-    targets: dict[str, pd.Series] = {}
+def build_targets_dict(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    targets: dict[str, pd.DataFrame] = {}
     for k in ["A", "B", "C", "D"]:
         col = f"target_{k}"
         if col in df.columns:
             s = pd.to_numeric(df[col], errors="coerce").fillna(0)
-            targets[k] = (s > 0).astype(int)
-    if targets:
-        return targets
+            # Create a 1-column DataFrame to maintain compatibility
+            targets[k] = pd.DataFrame({col: (s > 0).astype(int)}, index=df.index)
+    
+    # If targets are in the columns (e.g. fallback read from CSV), return them.
+    # Otherwise build them from scratch (returns DataFrames with 10 PV columns)
     built, _ = build_target_definitions(df)
-    return {k: pd.Series(v, index=df.index) for k, v in built.items()}
+    return built
 
 
-def get_target_series(df: pd.DataFrame, cfg: dict) -> tuple[pd.Series, str]:
+def get_target_series(df: pd.DataFrame, cfg: dict) -> tuple[pd.DataFrame, str]:
     targets = build_targets_dict(df)
     key = get_target_key(cfg)
     if key not in targets:
         key = sorted(targets.keys())[0]
-    return pd.Series(targets[key], index=df.index), key
+    return targets[key], key
 
 
 def load_leakage_exclude(cfg: dict) -> set[str]:
@@ -103,6 +115,8 @@ def select_feature_columns(
         if lc in _HARD_EXCLUDE_EXACT:
             continue
         if any(s in lc for s in _HARD_EXCLUDE_SUBSTR):
+            continue
+        if _CR_ITEM_RE.match(lc):  # CC-4: bloqueia itens brutos de tarefas criativas
             continue
         if lc.startswith("w_") or "weight" in lc:
             continue

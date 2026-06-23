@@ -1,55 +1,66 @@
 # PISA 2022 — Resiliência Criativa (Brasil)
 
-Pipeline de análise do microdado PISA 2022: auditoria, targets A/B/C/D, modelagem e dashboard.
+Pipeline acadêmico de Machine Learning para detecção e análise de **Resiliência Criativa** em estudantes brasileiros utilizando os microdados oficiais do PISA 2022.
 
-## Estrutura
+Este projeto implementa metodologias analíticas robustas padrão OCDE (Qualis A1), operando simultaneamente sobre os 10 *Plausible Values* (Regras de Rubin) e estimando o erro padrão através do método *Balanced Repeated Replication* (BRR Fay) utilizando 80 pesos replicados.
+
+## Estrutura Científica de Diretórios
 
 ```
-├── config/config.yaml      # parâmetros do pipeline
-├── project/metadata.json   # metadados (dataset detectado, versão)
-├── data/                   # CSV de entrada (pisa_brasil_estudo_limpo.csv)
-├── src/                    # código Python por fase
-├── scripts/                # run_stage.sh, run_all.sh, setup_venv.sh
-├── outputs/
-│   ├── reports/            # relatórios .md
-│   ├── tables/             # tabelas .csv
-│   └── figures/            # gráficos .png
-├── models/                 # modelos treinados (.joblib)
-└── dashboard/              # app Streamlit
+├── config/                 # Arquivos de configuração yaml
+├── dashboard/              # Código fonte do app interativo Streamlit
+├── data/                   # [Ignorado no Git] Dados locais do PISA
+│   ├── raw/                # Arquivos originais (.sav, .csv cru)
+│   └── processed/          # Datasets filtrados após limpeza
+├── docs/                   # Documentação e referências
+│   ├── manuscript/         # Versões do artigo científico (.md, .docx)
+│   └── references/         # Documentos oficiais, questionários, frameworks
+├── models/                 # [Joblibs ignorados] Modelos empacotados
+├── outputs/                # Resultados das fases do pipeline
+│   ├── figures/            # Gráficos e visualizações (SHAP, Curvas)
+│   ├── reports/            # Artefatos textuais em formato .md
+│   └── tables/             # Tabelas estruturadas com métricas (CSV)
+├── scripts/                # Automação do ambiente (bash)
+├── src/                    # Código modular das fases do pipeline Python
+└── tests/                  # Scripts de testes unitários automatizados
 ```
 
-Documentação detalhada: [docs/ESTRUTURA.md](docs/ESTRUTURA.md)
+## Setup do Ambiente
 
-## Início rápido
+O projeto requer Python 3.9+ e utiliza um ambiente virtual.
 
 ```bash
-./venv_setup.sh
+# 1. Torne os scripts executáveis
+chmod +x scripts/*.sh
+
+# 2. Inicialize o Virtual Environment e instale dependências
+./scripts/setup_venv.sh
+
+# 3. Ative o ambiente
 source .venv/bin/activate
-./scripts/run_stage.sh data_audit
-./scripts/run_all.sh          # todas as fases (demorado)
-./scripts/run_dashboard.sh    # interface Streamlit
 ```
 
-Use sempre `python3` (não `python`).
+## Uso
 
-## Fases do pipeline
+O orquestrador `main.py` roda as fases isoladas do projeto ou o pipeline completo. Ele lida com todas as etapas: depuis da auditoria dos dados, extração de métricas de Equidade, SHAP values, até inferência combinada com Regras de Rubin.
 
-| Stage | Descrição |
-|-------|-----------|
-| `data_audit` | Qualidade e missingness |
-| `data_dictionary` | Dicionário de variáveis |
-| `variable_discovery` | Catálogo por família |
-| `leakage_audit` | Gate de vazamento |
-| `target_comparison` | Targets A/B/C/D |
-| `eda` | Análise exploratória |
-| `resilient_profile` | Perfil resilientes vs não |
-| `clusterer` | KMeans / hierárquico / GMM |
-| `modeling` | LR, Random Forest (+ boosting opcional) |
-| `shap` | Importância de features |
-| `fairness` | Métricas por grupo sensível |
-| `robustness` | Bootstrap e calibração |
-| `dashboard` | Manifest + Streamlit |
+```bash
+# Executar a fase de auditoria
+PYTHONPATH=. python3 src/main.py --stage data_audit
 
-## Resultados
+# Executar todas as fases consecutivamente (pode ser demorado)
+./scripts/run_all.sh
 
-Após executar o pipeline, consulte `outputs/reports/` e `outputs/tables/`. O modelo treinado fica em `models/best_model.joblib`.
+# Levantar a interface web visual (Streamlit)
+./scripts/run_dashboard.sh
+```
+
+## Metodologia & Reproduzibilidade
+
+* **Combate a Data Leakage:** Fronteiras quantitativas (quartis ESCS e Performance Criativa) aprendidas estritamente no conjunto de Treino.
+* **Rubin's Rules Pooling:** Os algoritmos preditivos (XGBoost) são instanciados e treinados independentemente sobre PV1 a PV10, tendo suas *probabilities* agrupadas.
+* **Fay BRR (Replicate Weights):** Erros padrões computados repetindo as métricas nos 80 conjuntos de replicação propostos pela OCDE, assegurando a confiabilidade das generalizações.
+* **Explainable AI:** Diagnósticos de explicabilidade calculados via aproximações `shap`.
+
+---
+*Desenvolvido como pesquisa acadêmica focada na mitigação das disparidades em Machine Learning Educacional.*

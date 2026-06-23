@@ -29,7 +29,11 @@ def run_shap_analysis(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
     feature_cols = meta.get("feature_cols") or select_feature_columns(df, cfg)
     model = joblib.load(model_path)
 
-    y, target_key = get_target_series(df, cfg)
+    y_raw, target_key = get_target_series(df, cfg)
+    if isinstance(y_raw, pd.DataFrame):
+        y = (y_raw.mean(axis=1) >= 0.5).astype(int)
+    else:
+        y = y_raw
     x = df[feature_cols].apply(pd.to_numeric, errors="coerce")
     mask = y.notna()
     x, y = x.loc[mask], y.loc[mask].astype(int)
@@ -45,7 +49,8 @@ def run_shap_analysis(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
     method = "permutation_importance"
 
     # Amostra para SHAP (dataset grande)
-    max_rows = int(cfg.get("shap", {}).get("max_rows", 800))
+    # SR-4: Aumentado para 2000 linhas para melhor representatividade
+    max_rows = int(cfg.get("shap", {}).get("max_rows", 2000))
     if len(x) > max_rows:
         sample_idx = x.sample(max_rows, random_state=int(cfg.get("random_seed", 42))).index
         x_sample = x.loc[sample_idx]
@@ -56,27 +61,48 @@ def run_shap_analysis(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
     try:
         import shap
 
-        clf = model.named_steps.get("clf", model)
-        if hasattr(model, "named_steps") and "imputer" in model.named_steps:
-            x_imp = model.named_steps["imputer"].transform(x_sample)
-            if "scaler" in model.named_steps:
-                x_imp = model.named_steps["scaler"].transform(x_imp)
-            x_matrix = x_imp
-        else:
-            x_matrix = x_sample.values
+        # SR-4: Usar shap.Explainer (API moderna) em vez de acessar etapas do pipeline
+        # diretamente. Esta API detecta automaticamente o tipo de modelo e garante
+        # que os valores SHAP sejam calculados na escala correta (features originais),
+        # sem a distorção introduzida por passar dados escalados a TreeExplainer.
+        try:
+            explainer = shap.Explainer(model, x_sample)
+            shap_values = explainer(x_sample)
+            sv = shap_values.values
+            if sv.ndim == 3:
+                # Classificação binária: pega a classe positiva (index 1)
+                sv = sv[:, :, 1]
+            mean_abs = np.abs(sv).mean(axis=0)
+            method = "shap_explainer"
+        except Exception:
+            # Fallback: TreeExplainer com etapa clf extraída do pipeline
+            clf = model.named_steps.get("clf", model) if hasattr(model, "named_steps") else model
+            if hasattr(model, "named_steps") and "imputer" in model.named_steps:
+                # Para modelos de árvore: apenas imputar (NÃO escalar) antes do TreeExplainer
+                # Os thresholds da árvore são na escala pós-imputação / pós-scaler;
+                # usar dados pré-scaler causa distorção nos valores SHAP.
+                # Solução: passar dados na mesma escala em que a árvore foi treinada.
+                x_imp = model.named_steps["imputer"].transform(x_sample)
+                if "scaler" in model.named_steps:
+                    # Escalar APENAS para modelos baseados em árvore que foram
+                    # treinados com scaler (raro, pois árvores não exigem escala)
+                    x_imp = model.named_steps["scaler"].transform(x_imp)
+                x_matrix = x_imp
+            else:
+                x_matrix = x_sample.values
 
-        if hasattr(clf, "feature_importances_"):
-            explainer = shap.TreeExplainer(clf)
-            shap_values = explainer.shap_values(x_matrix)
-            if isinstance(shap_values, list):
-                shap_values = shap_values[1] if len(shap_values) > 1 else shap_values[0]
-            mean_abs = np.abs(shap_values).mean(axis=0)
-            method = "shap_tree"
-        else:
-            explainer = shap.LinearExplainer(clf, x_matrix)
-            shap_values = explainer.shap_values(x_matrix)
-            mean_abs = np.abs(shap_values).mean(axis=0)
-            method = "shap_linear"
+            if hasattr(clf, "feature_importances_"):
+                tree_explainer = shap.TreeExplainer(clf)
+                shap_values_raw = tree_explainer.shap_values(x_matrix)
+                if isinstance(shap_values_raw, list):
+                    shap_values_raw = shap_values_raw[1] if len(shap_values_raw) > 1 else shap_values_raw[0]
+                mean_abs = np.abs(shap_values_raw).mean(axis=0)
+                method = "shap_tree_fallback"
+            else:
+                linear_explainer = shap.LinearExplainer(clf, x_matrix)
+                shap_values_raw = linear_explainer.shap_values(x_matrix)
+                mean_abs = np.abs(shap_values_raw).mean(axis=0)
+                method = "shap_linear"
 
         importance_df = pd.DataFrame(
             {"feature": feature_cols, "mean_abs_shap": mean_abs}

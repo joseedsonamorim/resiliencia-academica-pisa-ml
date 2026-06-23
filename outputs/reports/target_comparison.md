@@ -1,19 +1,19 @@
-# Target comparison (A/B/C/D)
+# Target comparison (A/B/C/D) - Plausible Values Pooled
 
-- Dataset: pisa_brasil_estudo_limpo.csv
+- Dataset: PISA2022_BRASIL_FULL.csv
 - ESCS proxy: **ESCS**
-- CRT proxy: **CRT_SCORE**
+- CRT proxy: **10 Plausible Values (Rubin's Rules)**
+- Pesos amostrais (W_FSTUWT): **sim**
+- N referência: 10,798 estudantes
 
-## Estatísticas
-| target_def   |    n |   n_pos |   prevalence |
-|:-------------|-----:|--------:|-------------:|
-| A            | 3834 |     164 |    0.0427752 |
-| B            | 3834 |     248 |    0.0646844 |
-| C            | 3834 |      70 |    0.0182577 |
-| D            | 3834 |    1150 |    0.299948  |
+## Estatísticas de prevalência (Média dos PVs)
+```csv
+target_def,n,n_pos,prevalence
+A,10798,314.4,0.029116503056121505
+B,10798,528.4,0.048934987960733464
+C,10798,87.1,0.00806630857566216
+D,10798,3144.6,0.29122059640674197
+```
 
-## Notas das definições
-A: ESCS <= Q1 (Q0.25=-1.6970) e CRT >= Q3 (Q0.75=0.4925)
-B: ESCS <= P30 (P0.30=-1.5200) e CRT >= P70 (P0.70=0.4762)
-C: ESCS <= Q1 (Q0.25=-1.6970) e CRT >= P90 (P0.90=0.5606)
-D: score composto (CRT z - ESCS z) com corte em P70
+## Nota metodológica 1A
+A resiliência foi computada independentemente para cada um dos 10 *Plausible Values* da OCDE. O limiar (P75, P90, etc) é recalculado 10 vezes. A estatística final apresentada é o pooled average das 10 definições. No treinamento de Machine Learning, os modelos devem prever e combinar esses 10 vetores de resposta separadamente.

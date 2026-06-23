@@ -3,38 +3,51 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import joblib
 import numpy as np
 import pandas as pd
 from sklearn.calibration import calibration_curve
-from sklearn.metrics import brier_score_loss, roc_auc_score
+from sklearn.metrics import (
+    average_precision_score,
+    brier_score_loss,
+    roc_auc_score,
+)
 
 from src.utils.markdown import df_to_markdown
-from src.utils.pipeline_data import get_target_series, select_feature_columns
+from src.utils.pipeline_data import get_target_series
 from src.utils.seed import set_global_seed
+
 
 
 def run_robustness(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
     set_global_seed(int(cfg.get("random_seed", 42)))
     seed = int(cfg.get("random_seed", 42))
 
-    model_path = Path(cfg["paths"]["models_dir"]) / "best_model.joblib"
     meta_path = Path(cfg["paths"]["models_dir"]) / "modeling_meta.json"
-    if not model_path.exists():
+    predictions_path = Path(cfg["outputs"]["tables_dir"]) / "modeling_holdout_predictions.csv"
+
+    if not predictions_path.exists():
         raise FileNotFoundError(
-            "Modelo não encontrado. Execute primeiro: python3 -m src.main --stage modeling"
+            "Predições do holdout não encontradas. "
+            "Execute primeiro: python3 -m src.main --stage modeling"
         )
 
-    model = joblib.load(model_path)
     meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
-    feature_cols = meta.get("feature_cols") or select_feature_columns(df, cfg)
+    target_key = str(meta.get("target_key", get_target_series(df, cfg)[1]))
 
-    y, target_key = get_target_series(df, cfg)
-    x = df[feature_cols].apply(pd.to_numeric, errors="coerce")
-    mask = y.notna()
-    x, y = x.loc[mask], y.loc[mask].astype(int)
+    pred_df = pd.read_csv(predictions_path)
+    required_cols = {"y_true", "proba_resilient", "row_id"}
+    if not required_cols.issubset(pred_df.columns):
+        raise ValueError(
+            f"modeling_holdout_predictions.csv deve conter as colunas {required_cols}. "
+            f"Colunas encontradas: {list(pred_df.columns)}"
+        )
 
-    proba = model.predict_proba(x)[:, 1]
+    y = pred_df["y_true"].astype(int).to_numpy()
+    proba = pred_df["proba_resilient"].to_numpy(dtype=float)
+    row_ids = pred_df["row_id"].to_numpy()
+
+    if len(y) == 0 or np.unique(y).size < 2:
+        raise ValueError("holdout insuficiente ou sem variação de classe para bootstrap.")
 
     out_reports = Path(cfg["outputs"]["reports_dir"])
     out_tables = Path(cfg["outputs"]["tables_dir"])
@@ -45,26 +58,74 @@ def run_robustness(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
 
     n_boot = int(cfg.get("robustness", {}).get("n_bootstrap", 200))
     rng = np.random.default_rng(seed)
+
+    # ── Bootstrap exclusivamente no holdout ──
     aucs: list[float] = []
+    aps: list[float] = []
     n = len(y)
     for _ in range(n_boot):
         idx = rng.integers(0, n, n)
-        y_b = y.iloc[idx]
+        y_b = y[idx]
         p_b = proba[idx]
-        if y_b.nunique() < 2:
+        if len(np.unique(y_b)) < 2:
             continue
         aucs.append(float(roc_auc_score(y_b, p_b)))
+        aps.append(float(average_precision_score(y_b, p_b)))
 
-    boot_df = pd.DataFrame(
-        {
-            "metric": ["roc_auc"],
-            "mean": [float(np.mean(aucs)) if aucs else float("nan")],
-            "std": [float(np.std(aucs)) if aucs else float("nan")],
-            "ci_low": [float(np.percentile(aucs, 2.5)) if aucs else float("nan")],
-            "ci_high": [float(np.percentile(aucs, 97.5)) if aucs else float("nan")],
+    def _boot_row(metric: str, values: list[float]) -> dict:
+        if not values:
+            return {"metric": metric, "mean": float("nan"), "std": float("nan"),
+                    "ci_low": float("nan"), "ci_high": float("nan"), "n_boot": 0}
+        return {
+            "metric": metric,
+            "mean": float(np.mean(values)),
+            "std": float(np.std(values)),
+            "ci_low": float(np.percentile(values, 2.5)),
+            "ci_high": float(np.percentile(values, 97.5)),
+            "n_boot": len(values),
         }
-    )
+
+    boot_df = pd.DataFrame([
+        _boot_row("roc_auc", aucs),
+        _boot_row("average_precision", aps),
+    ])
+    boot_df.to_csv(out_tables / "modeling_best_bootstrap.csv", index=False)
     boot_df.to_csv(out_tables / "robustness_bootstrap.csv", index=False)
+
+    # ── BRR FAY REPLICATE WEIGHTS (Nível 1A) ──
+    # Calcular o Erro Padrão do ROC-AUC usando os 80 pesos de replicação
+    df_holdout = df.loc[row_ids]
+    brr_se_auc = float("nan")
+    brr_se_ap = float("nan")
+    base_auc_w = float("nan")
+    base_ap_w = float("nan")
+    
+    if "W_FSTUWT" in df_holdout.columns:
+        w_base = df_holdout["W_FSTUWT"].fillna(0).to_numpy()
+        if w_base.sum() > 0:
+            try:
+                base_auc_w = roc_auc_score(y, proba, sample_weight=w_base)
+                base_ap_w = average_precision_score(y, proba, sample_weight=w_base)
+                
+                sum_sq_auc = 0.0
+                sum_sq_ap = 0.0
+                count_brr = 0
+                for i in range(1, 81):
+                    w_col = f"W_FSTURWT{i}"
+                    if w_col in df_holdout.columns:
+                        w_rep = df_holdout[w_col].fillna(0).to_numpy()
+                        rep_auc = roc_auc_score(y, proba, sample_weight=w_rep)
+                        rep_ap = average_precision_score(y, proba, sample_weight=w_rep)
+                        sum_sq_auc += (rep_auc - base_auc_w) ** 2
+                        sum_sq_ap += (rep_ap - base_ap_w) ** 2
+                        count_brr += 1
+                
+                if count_brr == 80:
+                    brr_se_auc = np.sqrt(0.05 * sum_sq_auc)
+                    brr_se_ap = np.sqrt(0.05 * sum_sq_ap)
+            except Exception:
+                pass
+
 
     brier = float(brier_score_loss(y, proba))
     try:
@@ -92,12 +153,26 @@ def run_robustness(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
         pass
 
     md = [
-        "# Robustness (Fase 11)\n\n",
-        f"- Dataset: `{csv_path.name}`\n",
-        f"- Target: **{target_key}**\n",
-        f"- Bootstrap iterations: {n_boot}\n",
-        f"- Brier score: {brier:.4f}\n\n",
+        "# Robustez e Calibração (Fase 11)\\n\\n",
+        f"- Dataset: `{csv_path.name}`\\n",
+        f"- Target: **{target_key}**\\n",
+        f"- Bootstrap iterations: {n_boot} (somente sobre holdout)\\n",
+        f"- N holdout: {n}\\n",
+        f"- Brier score (holdout): {brier:.4f}\\n\\n",
+        "## Bootstrap de métricas (holdout)\\n\\n",
+        "> As estimativas abaixo são calculadas **exclusivamente** sobre o conjunto de teste "
+        "(holdout), nunca sobre os dados de treino. Cada iteração reamostraliza com "
+        "reposição o holdout para estimar a variabilidade das métricas.\\n\\n",
         df_to_markdown(boot_df),
-        "\n",
+        "\\n\\n",
+        "## Estimativa de Erro Padrão via Regras de Replicação BRR (Fay)\\n\\n",
+        "> O erro padrão da performance é estimado recalculando a métrica em 80 amostras "
+        "modificadas segundo os pesos de replicação fornecidos pela OCDE (`W_FSTURWT1` a `W_FSTURWT80`), "
+        "garantindo que o desenho amostral complexo do PISA foi levado em conta (Fay's method).\\n\\n",
+        f"- **ROC-AUC (Base Weight)**: {base_auc_w:.4f}\\n",
+        f"- **ROC-AUC (BRR Standard Error)**: {brr_se_auc:.4f}\\n",
+        f"- **PR-AUC (Base Weight)**: {base_ap_w:.4f}\\n",
+        f"- **PR-AUC (BRR Standard Error)**: {brr_se_ap:.4f}\\n",
+        "\\n",
     ]
     (out_reports / "robustness_report.md").write_text("".join(md), encoding="utf-8")

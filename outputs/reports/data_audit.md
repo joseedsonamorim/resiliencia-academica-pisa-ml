@@ -1,27 +1,28 @@
 # Data Audit
-- Dataset: pisa_brasil_estudo_limpo.csv
-- Linhas: 3834
-- Colunas: 1275
+- Dataset: PISA2022_BRASIL_FULL.csv
+- Linhas: 10798
+- Colunas: 1289
 - Duplicatas (linhas inteiras): 0
 
 ## Missing (top 15)
-|            |   missing_ratio |
-|:-----------|----------------:|
-| CR567Q06S  |        0.926708 |
-| CR543Q13S  |        0.924622 |
-| CR567Q06F  |        0.922274 |
-| CR552Q04F  |        0.921492 |
-| CR561Q06S  |        0.921492 |
-| CR567Q11SF |        0.919405 |
-| CR567Q11SD |        0.919144 |
-| CR567Q13S  |        0.918884 |
-| CR567Q11SC |        0.918362 |
-| CR567Q11SA |        0.918101 |
-| CR567Q11S  |        0.917319 |
-| CR567Q08SD |        0.916797 |
-| CR567Q08SE |        0.916797 |
-| CR568Q15S  |        0.916275 |
-| CR567Q08SC |        0.916275 |
+```csv
+,missing_ratio
+FL170Q07JA,1.0
+FL174Q02JA,1.0
+FL166Q07HA,1.0
+FL166Q06HA,1.0
+FL166Q05HA,1.0
+FL166Q03HA,1.0
+FL166Q02HA,1.0
+FL166Q01HA,1.0
+FL164Q16HA,1.0
+FL164Q15HA,1.0
+FL164Q14HA,1.0
+FL164Q13HA,1.0
+FL164Q12HA,1.0
+FL164Q11HA,1.0
+FL164Q10HA,1.0
+```
 ## Heurísticas
-- Possíveis IDs: ['CNTSTUID']
-- Possíveis pesos amostrais: ['W_FSTUWT']
+- Possíveis IDs: ['CNTRYID', 'CNTSCHID', 'CNTSTUID', 'BOOKID']
+- Possíveis pesos amostrais: ['SENWT', 'W_FSTUWT', 'W_FSTURWT1', 'W_FSTURWT2', 'W_FSTURWT3', 'W_FSTURWT4', 'W_FSTURWT5', 'W_FSTURWT6', 'W_FSTURWT7', 'W_FSTURWT8', 'W_FSTURWT9', 'W_FSTURWT10', 'W_FSTURWT11', 'W_FSTURWT12', 'W_FSTURWT13', 'W_FSTURWT14', 'W_FSTURWT15', 'W_FSTURWT16', 'W_FSTURWT17', 'W_FSTURWT18', 'W_FSTURWT19', 'W_FSTURWT20', 'W_FSTURWT21', 'W_FSTURWT22', 'W_FSTURWT23', 'W_FSTURWT24', 'W_FSTURWT25', 'W_FSTURWT26', 'W_FSTURWT27', 'W_FSTURWT28']

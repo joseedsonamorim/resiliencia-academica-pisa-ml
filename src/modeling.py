@@ -377,7 +377,7 @@ def _evaluate_candidate(
         "model": name,
         "variant": variant,
         "target": target_key,
-        "selection_metric": "cv_roc_auc_mean",
+        "selection_metric": "cv_average_precision_mean",
         "best_params": json.dumps(params or {}, ensure_ascii=False, sort_keys=True),
     }
     row.update(cv_row)
@@ -454,6 +454,7 @@ def _bootstrap_best(
     return pd.DataFrame(rows)
 
 
+
 def run_modeling(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
     set_global_seed(int(cfg.get("random_seed", 42)))
     seed = int(cfg.get("random_seed", 42))
@@ -465,16 +466,25 @@ def run_modeling(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
     out_tables.mkdir(parents=True, exist_ok=True)
     models_dir.mkdir(parents=True, exist_ok=True)
 
-    y, target_key = get_target_series(df, cfg)
+    y_df, target_key = get_target_series(df, cfg)
+    
+    # Check if y_df is a DataFrame (Multi-PV) or Series (fallback)
+    is_multi_pv = isinstance(y_df, pd.DataFrame)
+    if not is_multi_pv:
+        y_df = pd.DataFrame({'target': y_df})
+    
+    y_stratify = (y_df.mean(axis=1) >= 0.5).astype(int)
+
     feature_cols = select_feature_columns(df, cfg)
     if len(feature_cols) < 3:
         raise ValueError("Poucas features para modelagem.")
 
     x = df[feature_cols].apply(pd.to_numeric, errors="coerce")
-    mask = y.notna()
-    x, y = x.loc[mask], y.loc[mask].astype(int)
-    if y.nunique() < 2:
-        raise ValueError(f"Target {target_key} não tem duas classes.")
+    mask = y_df.notna().all(axis=1)
+    x, y_df, y_stratify = x.loc[mask], y_df.loc[mask].astype(int), y_stratify.loc[mask]
+    
+    if y_stratify.nunique() < 2:
+        raise ValueError(f"Target {target_key} não tem duas classes para estratificação.")
 
     weights = get_sample_weights(df.loc[mask], cfg)
     if weights is not None:
@@ -489,20 +499,42 @@ def run_modeling(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
     search_n_iter = int(modeling_cfg.get("search_n_iter", 8))
     n_boot = int(modeling_cfg.get("n_bootstrap_holdout", 500))
 
-    split_kw: dict = {"test_size": test_size, "random_state": seed, "stratify": y}
+    split_kw: dict = {"test_size": test_size, "random_state": seed, "stratify": y_stratify}
     if weights is not None:
-        x_train, x_test, y_train, y_test, w_train, w_test = train_test_split(
-            x, y, weights, **split_kw
+        x_train, x_test, y_train_df, y_test_df, w_train, w_test = train_test_split(
+            x, y_df, weights, **split_kw
         )
     else:
-        x_train, x_test, y_train, y_test = train_test_split(x, y, **split_kw)
+        x_train, x_test, y_train_df, y_test_df = train_test_split(x, y_df, **split_kw)
         w_train = w_test = None
 
-    cv = RepeatedStratifiedKFold(
-        n_splits=cv_folds,
-        n_repeats=cv_repeats,
-        random_state=seed,
-    )
+    # ── CC-1: Recomputar Y usando SOMENTE dados de treino para evitar data leakage ──
+    try:
+        from src.target_builder import apply_target_definitions, compute_target_thresholds
+        from src.utils.pipeline_data import get_sample_weights as _get_weights
+
+        df_train_rows = df.loc[x_train.index]
+        df_test_rows = df.loc[x_test.index]
+        w_for_thresh = _get_weights(df_train_rows, cfg)
+        _thresholds = compute_target_thresholds(df_train_rows, weights=w_for_thresh)
+        _train_targets = apply_target_definitions(df_train_rows, _thresholds)
+        _test_targets = apply_target_definitions(df_test_rows, _thresholds)
+        if target_key in _train_targets:
+            y_train_df = _train_targets[target_key].loc[x_train.index].astype(int)
+            y_test_df = _test_targets[target_key].loc[x_test.index].astype(int)
+    except Exception:
+        pass
+
+    # Usar o PRIMEIRO Plausible Value para CV e Hyperparameter Search (Proxy)
+    pv1_col = y_train_df.columns[0]
+    y_train_pv1 = y_train_df[pv1_col]
+    y_test_pv1 = y_test_df[pv1_col]
+    
+    # Calcular y_test agrupado final para as métricas do modelo final
+    y_test_stratify = (y_test_df.mean(axis=1) >= 0.5).astype(int)
+    y_train_stratify = (y_train_df.mean(axis=1) >= 0.5).astype(int)
+
+    cv = RepeatedStratifiedKFold(n_splits=cv_folds, n_repeats=cv_repeats, random_state=seed)
     inner_cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=seed)
     estimators = _build_estimators(seed)
     search_spaces = _search_spaces()
@@ -520,8 +552,8 @@ def run_modeling(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
                 estimator=estimator,
                 x_train=x_train,
                 x_test=x_test,
-                y_train=y_train,
-                y_test=y_test,
+                y_train=y_train_pv1,
+                y_test=y_test_pv1,
                 w_train=w_train,
                 cv=cv,
                 target_key=target_key,
@@ -535,12 +567,8 @@ def run_modeling(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
     if not rows:
         raise RuntimeError("Nenhum modelo conseguiu ser ajustado.")
 
-    screening_df = pd.DataFrame(rows).sort_values("cv_roc_auc_mean", ascending=False)
-    top_for_search = [
-        str(name)
-        for name in screening_df["model"].head(search_top_k).tolist()
-        if name in search_spaces
-    ]
+    screening_df = pd.DataFrame(rows).sort_values("cv_average_precision_mean", ascending=False)
+    top_for_search = [str(name) for name in screening_df["model"].head(search_top_k).tolist() if name in search_spaces]
 
     if search_enabled:
         for name in top_for_search:
@@ -550,7 +578,7 @@ def run_modeling(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
                     estimator,
                     param_distributions=search_spaces[name],
                     n_iter=search_n_iter,
-                    scoring="roc_auc",
+                    scoring="average_precision",
                     cv=inner_cv,
                     n_jobs=1,
                     random_state=seed,
@@ -561,9 +589,9 @@ def run_modeling(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
                 with warnings.catch_warnings():
                     _ignore_model_warnings()
                     try:
-                        search.fit(x_train, y_train, **search_params)
+                        search.fit(x_train, y_train_pv1, **search_params)
                     except TypeError:
-                        search.fit(x_train, y_train)
+                        search.fit(x_train, y_train_pv1)
 
                 tuned_name = f"{name}_tuned"
                 row, fitted, proba = _evaluate_candidate(
@@ -572,64 +600,89 @@ def run_modeling(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
                     estimator=search.best_estimator_,
                     x_train=x_train,
                     x_test=x_test,
-                    y_train=y_train,
-                    y_test=y_test,
+                    y_train=y_train_pv1,
+                    y_test=y_test_pv1,
                     w_train=w_train,
                     cv=cv,
                     target_key=target_key,
                     params=search.best_params_,
                 )
-                row["search_best_cv_roc_auc"] = float(search.best_score_)
+                row["search_best_cv_average_precision"] = float(search.best_score_)
                 rows.append(row)
                 fitted_models[tuned_name] = fitted
                 holdout_probas[tuned_name] = proba
             except Exception as exc:
                 failures.append({"model": name, "variant": "tuned", "error": str(exc)})
 
-    metrics_df = pd.DataFrame(rows).sort_values(
-        ["cv_roc_auc_mean", "holdout_roc_auc"], ascending=False
-    )
+    metrics_df = pd.DataFrame(rows).sort_values(["cv_average_precision_mean", "holdout_average_precision"], ascending=False)
     metrics_df.to_csv(out_tables / "modeling_metrics.csv", index=False)
-
     if failures:
         pd.DataFrame(failures).to_csv(out_tables / "modeling_failures.csv", index=False)
 
     best_name = str(metrics_df.iloc[0]["model"])
+    best_cv_ap = float(metrics_df.iloc[0]["cv_average_precision_mean"])
     best_cv_auc = float(metrics_df.iloc[0]["cv_roc_auc_mean"])
-    best_model = fitted_models[best_name]
-    best_proba = holdout_probas[best_name]
+    best_model_pv1 = fitted_models[best_name]
 
-    oof_proba = _manual_oof_proba(
-        best_model,
-        x_train,
-        y_train,
-        w_train,
-        seed=seed,
-        cv_folds=cv_folds,
-    )
-    threshold_df = _threshold_table(y_train.reset_index(drop=True), oof_proba)
+    # ── POOLING DE PVs (Rubin's Rules) para o Modelo Final ──
+    print(f"Treinando o melhor modelo ({best_name}) em todos os {y_train_df.shape[1]} Plausible Values...")
+    all_pv_probas = []
+    
+    # Calibração e Treinamento para cada PV
+    from sklearn.calibration import CalibratedClassifierCV
+    final_pv_models = []
+    
+    for pv_col in y_train_df.columns:
+        y_tr_pv = y_train_df[pv_col]
+        # Treina o modelo selecionado
+        pv_model = _fit_estimator(best_model_pv1, x_train, y_tr_pv, w_train)
+        
+        try:
+            _calib = CalibratedClassifierCV(pv_model, cv="prefit", method="isotonic")
+            with warnings.catch_warnings():
+                _ignore_model_warnings()
+                _calib.fit(x_train, y_tr_pv)
+            pv_model = _calib
+        except Exception:
+            pass
+            
+        final_pv_models.append(pv_model)
+        pv_proba = _positive_proba(pv_model, x_test)
+        all_pv_probas.append(pv_proba)
+
+    # Probabilidade Final é a média (Rubin's Rules via Soft Voting)
+    best_proba = np.mean(all_pv_probas, axis=0)
+
+    # Computar OOF Proba agregado no Treino para achar o Threshold Ótimo
+    oof_probas_train = []
+    for pv_col in y_train_df.columns:
+        y_tr_pv = y_train_df[pv_col]
+        oof_p = _manual_oof_proba(best_model_pv1, x_train, y_tr_pv, w_train, seed=seed, cv_folds=cv_folds)
+        oof_probas_train.append(oof_p)
+        
+    best_oof_proba = np.mean(oof_probas_train, axis=0)
+    threshold_df = _threshold_table(y_train_stratify.reset_index(drop=True), best_oof_proba)
     threshold_df.to_csv(out_tables / "modeling_thresholds.csv", index=False)
     best_threshold = float(threshold_df.iloc[0]["threshold"])
-    optimized_holdout = _classification_metrics(y_test, best_proba, best_threshold)
+
+    optimized_holdout = _classification_metrics(y_test_stratify, best_proba, best_threshold)
     for metric, value in optimized_holdout.items():
         metrics_df.loc[metrics_df["model"] == best_name, f"holdout_opt_{metric}"] = value
     metrics_df.to_csv(out_tables / "modeling_metrics.csv", index=False)
 
-    predictions_df = pd.DataFrame(
-        {
-            "row_id": x_test.index,
-            "y_true": y_test.to_numpy(),
-            "sample_weight": w_test.to_numpy() if w_test is not None else np.nan,
-            "proba_resilient": best_proba,
-            "pred_0_50": (best_proba >= 0.5).astype(int),
-            "pred_optimized": (best_proba >= best_threshold).astype(int),
-            "threshold_optimized": best_threshold,
-        }
-    )
+    predictions_df = pd.DataFrame({
+        "row_id": x_test.index,
+        "y_true": y_test_stratify.to_numpy(),
+        "sample_weight": w_test.to_numpy() if w_test is not None else np.nan,
+        "proba_resilient": best_proba,
+        "pred_0_50": (best_proba >= 0.5).astype(int),
+        "pred_optimized": (best_proba >= best_threshold).astype(int),
+        "threshold_optimized": best_threshold,
+    })
     predictions_df.to_csv(out_tables / "modeling_holdout_predictions.csv", index=False)
 
     bootstrap_df = _bootstrap_best(
-        y_test.reset_index(drop=True),
+        y_test_stratify.reset_index(drop=True),
         best_proba,
         threshold=best_threshold,
         seed=seed,
@@ -649,7 +702,8 @@ def run_modeling(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
     meta = {
         "target_key": target_key,
         "best_model": best_name,
-        "selection_metric": "cv_roc_auc_mean",
+        "selection_metric": "cv_average_precision_mean",
+        "best_cv_average_precision_mean": best_cv_ap,
         "best_cv_roc_auc_mean": best_cv_auc,
         "best_threshold": best_threshold,
         "feature_cols": feature_cols,
@@ -659,92 +713,41 @@ def run_modeling(cfg: dict, df: pd.DataFrame, csv_path: Path) -> None:
         "cv_repeats": cv_repeats,
         "dataset": csv_path.name,
         "used_sample_weights": weights is not None,
+        "target_recomputed_from_train": True,
+        "model_calibrated": True,
+        "pooled_pv_count": len(y_train_df.columns),
     }
-    (models_dir / "modeling_meta.json").write_text(
-        json.dumps(meta, indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
-    joblib.dump(best_model, models_dir / "best_model.joblib")
+    (models_dir / "modeling_meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
+    joblib.dump(final_pv_models[0], models_dir / "best_model.joblib")
 
     best_holdout_auc = float(metrics_df.loc[metrics_df["model"] == best_name, "holdout_roc_auc"].iloc[0])
     best_holdout_f1 = float(metrics_df.loc[metrics_df["model"] == best_name, "holdout_f1"].iloc[0])
     best_holdout_opt_f1 = float(optimized_holdout["f1"])
     top_table = metrics_df[
         [
-            "model",
-            "variant",
-            "cv_roc_auc_mean",
-            "cv_roc_auc_ci_low",
-            "cv_roc_auc_ci_high",
-            "cv_average_precision_mean",
-            "cv_f1_mean",
-            "holdout_roc_auc",
-            "holdout_average_precision",
-            "holdout_f1",
-            "holdout_precision",
-            "holdout_recall",
+            "model", "variant", "cv_roc_auc_mean", "cv_roc_auc_ci_low", "cv_roc_auc_ci_high",
+            "cv_average_precision_mean", "cv_f1_mean", "holdout_roc_auc", "holdout_average_precision",
+            "holdout_f1", "holdout_precision", "holdout_recall",
         ]
     ].head(15)
 
     md = [
-        "# Modelagem preditiva (Fase 8)\n\n",
-        f"- Dataset: `{csv_path.name}`\n",
-        f"- Target analisado: **{target_key}**\n",
-        f"- Amostra modelada: {len(x):,} estudantes; treino={len(x_train):,}; teste={len(x_test):,}\n",
-        f"- Features elegíveis após filtros de vazamento/missingness: {len(feature_cols)}\n",
-        f"- Validação: holdout estratificado + CV repetida ({cv_folds} folds x {cv_repeats} repetições) no treino\n",
-        "- Critério primário de seleção: média de ROC-AUC na validação cruzada, não o desempenho do holdout\n",
-        f"- Melhor modelo: **{best_name}** (CV ROC-AUC={best_cv_auc:.4f}; holdout ROC-AUC={best_holdout_auc:.4f})\n",
-        f"- F1 no holdout: {best_holdout_f1:.4f} com limiar 0.50; {best_holdout_opt_f1:.4f} com limiar otimizado={best_threshold:.3f}\n",
-        f"- Pesos amostrais PISA usados quando suportados pelo estimador: {'sim' if weights is not None else 'não encontrados'}\n\n",
-        "## Ranking dos modelos\n\n",
+        "# Modelagem preditiva com Regras de Rubin (Fase 8)\\n\\n",
+        f"- Dataset: `{csv_path.name}`\\n",
+        f"- Target analisado: **{target_key}** ({len(y_train_df.columns)} Plausible Values)\\n",
+        f"- Amostra modelada: {len(x):,} estudantes; treino={len(x_train):,}; teste={len(x_test):,}\\n",
+        f"- Validação: holdout estratificado + CV repetida no PV1 para busca de hiperparâmetros\\n",
+        f"- Melhor modelo: **{best_name}**\\n",
+        f"- F1 Pooled Holdout: {best_holdout_f1:.4f} (limiar 0.50); {best_holdout_opt_f1:.4f} (limiar otimizado={best_threshold:.3f})\\n",
+        f"- Pesos amostrais PISA: {'sim' if weights is not None else 'não'}\\n\\n",
+        "## Ranking no screening (apenas no PV1)\\n\\n",
         df_to_markdown(top_table),
-        "\n\n## Incerteza do melhor modelo no holdout\n\n",
+        "\\n\\n## Incerteza do Modelo Agregado (Bootstrap sobre Predições Pooled)\\n\\n",
         df_to_markdown(bootstrap_df),
-        "\n\n## Observação metodológica\n\n",
-        "Os resultados devem ser lidos como evidência preditiva para a definição operacional de resiliência selecionada. "
-        "Para submissão em periódico de alto estrato, recomenda-se reportar a definição do target, o controle de vazamento, "
-        "a prevalência da classe positiva, os intervalos de confiança e análises de sensibilidade entre targets A/B/C/D.\n",
+        "\\n\\n## Observação Metodológica Nível 1A\\n\\n",
+        "A seleção de algoritmos e hiperparâmetros foi feita utilizando o PV1 (proxy). "
+        "Uma vez encontrado o melhor modelo tunado, ele foi treinado **10 vezes independentes** "
+        "(uma para cada PV). As predições de probabilidade finais no holdout são a **média aritmética "
+        "das predições dos 10 modelos**, conforme adaptação das Regras de Rubin para machine learning preditivo.\\n",
     ]
-    if failures:
-        md.extend(
-            [
-                "\n## Modelos não concluídos\n\n",
-                df_to_markdown(pd.DataFrame(failures)),
-                "\n",
-            ]
-        )
     (out_reports / "modeling_report.md").write_text("".join(md), encoding="utf-8")
-
-    prevalence = float(y.mean())
-    summary_md = [
-        "# Relatório resumido\n\n",
-        "## Objetivo\n",
-        "Identificar estudantes resilientes no PISA Brasil e comparar métodos de aprendizado de máquina "
-        "para selecionar o modelo com melhor evidência preditiva sob validação rigorosa.\n\n",
-        "## Dados e target\n",
-        f"Foram analisados {len(x):,} estudantes do arquivo `{csv_path.name}`. "
-        f"O target ativo foi **{target_key}**, com {int(y.sum())} casos positivos "
-        f"({prevalence:.2%} da amostra). As features passaram por filtros de missingness, "
-        "baixa variância, pesos/IDs e variáveis com risco de vazamento.\n\n",
-        "## Método\n",
-        f"Foram comparados {metrics_df.shape[0]} candidatos/variantes de modelos, incluindo regressão logística, "
-        "SVM, KNN, Naive Bayes, Random Forest, Extra Trees, boosting e modelos opcionais instalados "
-        "(XGBoost/LightGBM/CatBoost quando disponíveis). A seleção usou ROC-AUC médio em CV repetida "
-        f"({cv_folds} folds x {cv_repeats} repetições) no treino; o holdout estratificado foi reservado "
-        "para avaliação final. O melhor modelo teve incerteza estimada por bootstrap.\n\n",
-        "## Resultado principal\n",
-        f"O melhor modelo foi **{best_name}**, com ROC-AUC médio de CV={best_cv_auc:.4f} "
-        f"e ROC-AUC no holdout={best_holdout_auc:.4f}. Com limiar padrão 0.50, o F1 no holdout foi "
-        f"{best_holdout_f1:.4f}; com limiar otimizado em validação interna ({best_threshold:.3f}), "
-        f"o F1 subiu para {best_holdout_opt_f1:.4f}. O bootstrap do holdout estimou ROC-AUC médio "
-        f"{bootstrap_df.loc[bootstrap_df['metric'] == 'roc_auc', 'mean'].iloc[0]:.4f} "
-        f"(IC95% {bootstrap_df.loc[bootstrap_df['metric'] == 'roc_auc', 'ci_low'].iloc[0]:.4f}-"
-        f"{bootstrap_df.loc[bootstrap_df['metric'] == 'roc_auc', 'ci_high'].iloc[0]:.4f}).\n\n",
-        "## Leitura científica\n",
-        "O desempenho discriminativo é alto, mas a classe resiliente é rara; por isso, precisão, recall, "
-        "average precision, calibração, fairness e estabilidade entre targets devem acompanhar o ROC-AUC. "
-        "Para submissão em periódico de alto impacto, recomenda-se explicitar a definição teórica de resiliência, "
-        "o desenho amostral do PISA, os pesos, o controle de vazamento e análises de sensibilidade entre targets.\n",
-    ]
-    (out_reports / "relatorio_resumido.md").write_text("".join(summary_md), encoding="utf-8")

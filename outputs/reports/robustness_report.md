@@ -1,10 +1,5 @@
-# Robustness (Fase 11)
-
-- Dataset: `pisa_brasil_estudo_limpo.csv`
-- Target: **A**
-- Bootstrap iterations: 200
-- Brier score: 0.0228
-
-| metric   |     mean |       std |   ci_low |   ci_high |
-|:---------|---------:|----------:|---------:|----------:|
-| roc_auc  | 0.973985 | 0.0039461 | 0.966172 |  0.980896 |
+# Robustez e Calibração (Fase 11)\n\n- Dataset: `PISA2022_BRASIL_FULL.csv`\n- Target: **A**\n- Bootstrap iterations: 200 (somente sobre holdout)\n- N holdout: 2160\n- Brier score (holdout): 0.0222\n\n## Bootstrap de métricas (holdout)\n\n> As estimativas abaixo são calculadas **exclusivamente** sobre o conjunto de teste (holdout), nunca sobre os dados de treino. Cada iteração reamostraliza com reposição o holdout para estimar a variabilidade das métricas.\n\n```csv
+metric,mean,std,ci_low,ci_high,n_boot
+roc_auc,0.8572821632751338,0.021716088989441183,0.809006469734524,0.898472688240865,200
+average_precision,0.1650075036365577,0.041216084670695464,0.09326148784630889,0.249667355826856,200
+```\n\n## Estimativa de Erro Padrão via Regras de Replicação BRR (Fay)\n\n> O erro padrão da performance é estimado recalculando a métrica em 80 amostras modificadas segundo os pesos de replicação fornecidos pela OCDE (`W_FSTURWT1` a `W_FSTURWT80`), garantindo que o desenho amostral complexo do PISA foi levado em conta (Fay's method).\n\n- **ROC-AUC (Base Weight)**: 0.8539\n- **ROC-AUC (BRR Standard Error)**: 0.0173\n- **PR-AUC (Base Weight)**: 0.1464\n- **PR-AUC (BRR Standard Error)**: 0.0326\n\n

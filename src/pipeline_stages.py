@@ -98,6 +98,9 @@ def run_stage(stage: str, cfg: dict | None = None) -> None:
         "robustness": lambda c, d, p: __import__(
             "src.robustness", fromlist=["run_robustness"]
         ).run_robustness(c, d, p),
+        "sensitivity": lambda c, d, p: __import__(
+            "src.sensitivity", fromlist=["run_sensitivity_analysis"]
+        ).run_sensitivity_analysis(c, d, p),
     }
 
     if stage not in handlers:

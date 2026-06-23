@@ -4,14 +4,12 @@ random_seed: 42
 data:
   # detector de arquivo csv na pasta data/ (sem caminho fixo)
   dataset_glob_patterns:
-    - "data/pisa*_estudo_limpo*.csv"
-    - "data/pisa*.csv"
-    - "data/*pisa*estudo*limpo*.csv"
+    - "data/processed/PISA2022_BRASIL_FULL.csv"
+    - "data/processed/PISA2022_BRASIL_ANALYSIS.csv"
   primary_dataset_min_rows: 100
 
 paths:
   config_dir: "config"
-  project_dir: "project"
   data_dir: "data"
   outputs_dir: "outputs"
   models_dir: "models"
@@ -31,6 +29,12 @@ analysis:
     - B
     - C
     - D
+  # Definição canônica de resiliência criativa usada no pipeline de modelagem.
+  # A = ESCS ≤ Q1 e CRT ≥ Q3 (definição mais conservadora — baixo NSE + alto desempenho criativo)
+  # B = ESCS ≤ P30 e CRT ≥ P70 (definição intermediária)
+  # C = ESCS ≤ Q1 e CRT ≥ P90 (definição estrita — alto desempenho criativo no topo)
+  # D = score composto (CRT_z - ESCS_z) ≥ P70 (definição exploratória de superação do contexto)
+  # Justificativa da escolha de A: alinha-se com a literatura PISA (Q1/Q3) e maximiza precisão.
   target_profile_key: A
   leakage_severity_thresholds:
     critical_mutual_info_ratio: 5.0
@@ -79,6 +83,20 @@ clustering:
       - "computer"
       - "internet"
       - "device"
+    uso_pedagogico_tic:
+      - "icteach"
+      - "pedag"
+      - "icthome"
+      - "ictsch"
+    competencia_digital:
+      - "ictcomp"
+      - "skill"
+      - "use"
+    bem_estar_digital:
+      - "sleep"
+      - "screen"
+      - "health"
+      - "mood"
     recursos_domesticos:
       - "homepos"
       - "home"
@@ -139,7 +157,9 @@ modeling:
   cv_repeats: 3
   hyperparameter_search: true
   search_top_k: 3
-  search_n_iter: 8
+  # Aumentado de 8 para 30: com espaços de busca de 4-6 hiperparâmetros,
+  # 8 iterações explorava < 15% do espaço; 30 garante cobertura mais confiável.
+  search_n_iter: 30
   n_bootstrap_holdout: 500
 
 shap:

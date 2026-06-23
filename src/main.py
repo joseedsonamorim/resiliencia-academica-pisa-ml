@@ -17,6 +17,7 @@ STAGES = [
     "shap",
     "fairness",
     "robustness",
+    "sensitivity",
     "dashboard",
 ]
 

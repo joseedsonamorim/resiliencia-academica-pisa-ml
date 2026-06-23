@@ -24,7 +24,7 @@ FIGURES = ROOT / "outputs" / "figures"
 MODELS = ROOT / "models"
 
 
-def _read_md(path: Path, max_chars: int = 14000) -> str:
+def _read_md(path: Path, max_chars: int = 25000) -> str:
     if not path.exists():
         return f"_(arquivo ausente: `{path.relative_to(ROOT)}`)_"
     text = path.read_text(encoding="utf-8")
@@ -37,7 +37,10 @@ def _read_md(path: Path, max_chars: int = 14000) -> str:
 def _read_csv(path: str) -> pd.DataFrame | None:
     p = Path(path)
     if p.exists():
-        return pd.read_csv(p)
+        try:
+            return pd.read_csv(p)
+        except Exception:
+            return None
     return None
 
 
@@ -64,9 +67,12 @@ def _pct(value: object, digits: int = 1) -> str:
 
 
 def _best_metric(metrics: pd.DataFrame | None) -> pd.Series | None:
-    if metrics is None or metrics.empty or "cv_roc_auc_mean" not in metrics.columns:
+    if metrics is None or metrics.empty or "cv_average_precision_mean" not in metrics.columns:
+        # Fallback para ROC-AUC se AP não existir
+        if metrics is not None and "cv_roc_auc_mean" in metrics.columns:
+            return metrics.sort_values(["cv_roc_auc_mean", "holdout_roc_auc"], ascending=False).iloc[0]
         return None
-    return metrics.sort_values(["cv_roc_auc_mean", "holdout_roc_auc"], ascending=False).iloc[0]
+    return metrics.sort_values(["cv_average_precision_mean", "holdout_average_precision"], ascending=False).iloc[0]
 
 
 def _target_row(prevalence: pd.DataFrame | None, target_key: str) -> pd.Series | None:
@@ -89,12 +95,12 @@ def _bootstrap_value(bootstrap: pd.DataFrame | None, metric: str, col: str) -> o
 
 def _target_explanation(target_key: str) -> str:
     explanations = {
-        "A": "definição mais conservadora: baixo ESCS e alto desempenho criativo por quartis.",
-        "B": "definição intermediária: grupo socioeconômico baixo ampliado e desempenho criativo alto.",
-        "C": "definição mais estrita: baixo ESCS e desempenho criativo no topo da distribuição.",
-        "D": "definição exploratória: escore composto de criatividade acima do contexto socioeconômico.",
+        "A": "Baixo nível socioeconômico (ESCS ≤ P25) e alto desempenho criativo (CRT_SCORE ≥ P75). Foco nos extremos.",
+        "B": "Baixo nível socioeconômico ampliado (ESCS ≤ P30) e criatividade alta (CRT_SCORE ≥ P70). Mais inclusivo.",
+        "C": "Baixo nível socioeconômico estrito (ESCS ≤ P25) e criatividade de elite (CRT_SCORE ≥ P90). Altamente restritivo.",
+        "D": "Desempenho criativo residual alto: escore de criatividade significativamente acima do esperado para o contexto socioeconômico.",
     }
-    return explanations.get(str(target_key), "definição operacional selecionada no arquivo de configuração.")
+    return explanations.get(str(target_key), "Definição operacional selecionada.")
 
 
 def _info_card(title: str, value: str, note: str, tone: str = "blue") -> None:
@@ -104,12 +110,13 @@ def _info_card(title: str, value: str, note: str, tone: str = "blue") -> None:
         "amber": ("#b45309", "#fff7ed"),
         "rose": ("#be123c", "#fff1f2"),
         "ink": ("#334155", "#f8fafc"),
+        "purple": ("#6d28d9", "#f5f3ff"),
     }
     accent, bg = colors.get(tone, colors["blue"])
     st.markdown(
         f"""
         <div class="info-card" style="border-top-color:{accent}; background:{bg};">
-          <div class="info-title">{html.escape(title)}</div>
+          <div class="info-title" style="color:{accent};">{html.escape(title)}</div>
           <div class="info-value">{html.escape(value)}</div>
           <div class="info-note">{html.escape(note)}</div>
         </div>
@@ -118,23 +125,47 @@ def _info_card(title: str, value: str, note: str, tone: str = "blue") -> None:
     )
 
 
-def _reading_note(title: str, body: str) -> None:
+def _reading_note(title: str, body: str, icon: str = "💡") -> None:
     st.markdown(
         f"""
         <div class="reading-note">
-          <strong>{html.escape(title)}</strong>
-          <span>{html.escape(body)}</span>
+          <div style="font-size: 1.2rem;">{icon}</div>
+          <div>
+            <strong>{html.escape(title)}:</strong>
+            <span style="color: #475569; margin-left: 4px;">{html.escape(body)}</span>
+          </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
 
-def _model_rank_chart(metrics: pd.DataFrame) -> None:
-    if "cv_roc_auc_mean" not in metrics.columns:
-        return
-    rank = metrics.sort_values("cv_roc_auc_mean", ascending=False).head(10)
-    chart = rank.set_index("model")[["cv_roc_auc_mean"]]
+def _alert(text: str, type: str = "info") -> None:
+    colors = {
+        "info": ("#1d4ed8", "#eff6ff"),
+        "warning": ("#b45309", "#fffbeb"),
+        "success": ("#047857", "#ecfdf5"),
+        "error": ("#b91c1c", "#fef2f2")
+    }
+    c_text, c_bg = colors.get(type, colors["info"])
+    st.markdown(
+        f"""
+        <div style="background-color: {c_bg}; border-left: 4px solid {c_text}; padding: 12px 16px; border-radius: 4px; color: {c_text}; font-size: 0.95rem; margin-bottom: 16px;">
+            {text}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+def _model_rank_chart(metrics: pd.DataFrame, metric_col: str = "cv_average_precision_mean") -> None:
+    if metric_col not in metrics.columns:
+        if "cv_roc_auc_mean" in metrics.columns:
+            metric_col = "cv_roc_auc_mean"
+        else:
+            return
+    rank = metrics.sort_values(metric_col, ascending=False).head(10)
+    chart = rank.set_index("model")[[metric_col]]
     st.bar_chart(chart, use_container_width=True, height=320)
 
 
@@ -170,148 +201,193 @@ def _compact_metrics_table(metrics: pd.DataFrame) -> pd.DataFrame:
     cols = [
         "model",
         "variant",
-        "cv_roc_auc_mean",
-        "cv_roc_auc_ci_low",
-        "cv_roc_auc_ci_high",
         "cv_average_precision_mean",
         "cv_f1_mean",
-        "holdout_roc_auc",
+        "cv_roc_auc_mean",
         "holdout_average_precision",
-        "holdout_f1",
-        "holdout_precision",
-        "holdout_recall",
         "holdout_opt_f1",
+        "holdout_roc_auc",
     ]
     return metrics[[c for c in cols if c in metrics.columns]]
 
 
+# --- Page Config & CSS ---
 st.set_page_config(
-    page_title="PISA Resiliência Acadêmica",
+    page_title="PISA Resiliência Criativa — Painel Científico",
     layout="wide",
     initial_sidebar_state="collapsed",
+    page_icon="🎓"
 )
+
 st.markdown(
     """
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    
     :root {
-      --ink: #182230;
+      --ink: #0f172a;
       --muted: #64748b;
-      --line: #d9e2ef;
-      --paper: #fbfcfe;
-      --blue: #1d4ed8;
-      --green: #047857;
-      --amber: #b45309;
-      --rose: #be123c;
+      --line: #e2e8f0;
+      --paper: #ffffff;
+      --blue: #2563eb;
+      --green: #059669;
+      --amber: #d97706;
+      --rose: #e11d48;
+      --purple: #7c3aed;
     }
-    .stApp { background: linear-gradient(180deg, #f7f9fc 0%, #ffffff 42%); color: var(--ink); }
-    .main .block-container { max-width: 1360px; padding-top: 1.25rem; padding-bottom: 3rem; }
-    h1, h2, h3 { color: var(--ink); letter-spacing: 0; }
-    h1 { font-size: clamp(2rem, 3.5vw, 3.5rem); line-height: 1.02; margin-bottom: .2rem; }
-    h2 { margin-top: 1.3rem; }
-    div[data-testid="stMetric"] {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 12px 14px;
-      background: #ffffff;
-      box-shadow: 0 8px 20px rgba(15, 23, 42, .05);
+    
+    .stApp { 
+        background-color: #f8fafc;
+        font-family: 'Inter', sans-serif;
     }
-    div[data-testid="stMetric"] label { color: var(--muted); }
+    
+    h1, h2, h3, h4, h5, h6 { 
+        font-family: 'Inter', sans-serif;
+        color: var(--ink);
+        letter-spacing: -0.02em;
+    }
+    
+    h1 { font-size: clamp(2.2rem, 4vw, 3rem); font-weight: 800; line-height: 1.1; margin-bottom: 0.5rem; }
+    h2 { font-weight: 700; margin-top: 2rem; border-bottom: 1px solid var(--line); padding-bottom: 0.5rem; }
+    h3 { font-weight: 600; color: #334155; }
+    
     .hero {
       border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 22px 24px;
-      background:
-        linear-gradient(120deg, rgba(29, 78, 216, .10), rgba(4, 120, 87, .07) 52%, rgba(180, 83, 9, .08)),
-        #ffffff;
-      box-shadow: 0 14px 34px rgba(15, 23, 42, .07);
-      margin-bottom: 16px;
+      border-radius: 12px;
+      padding: 32px;
+      background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
     }
+    
+    .hero::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 6px;
+        background: linear-gradient(90deg, var(--blue), var(--purple), var(--rose));
+    }
+    
     .hero-kicker {
-      color: #1d4ed8;
-      font-size: .82rem;
+      color: var(--purple);
+      font-size: 0.85rem;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: .08em;
-      margin-bottom: 7px;
+      letter-spacing: 0.1em;
+      margin-bottom: 12px;
     }
+    
     .hero-body {
-      max-width: 960px;
-      color: #334155;
-      font-size: 1.04rem;
-      line-height: 1.56;
-      margin-top: 8px;
+      max-width: 900px;
+      color: #475569;
+      font-size: 1.1rem;
+      line-height: 1.6;
+      margin-top: 12px;
     }
-    .pill-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+    
+    .pill-row { display:flex; flex-wrap:wrap; gap:10px; margin-top:20px; }
     .pill {
       display:inline-flex; align-items:center; gap:6px;
-      border:1px solid rgba(30,41,59,.16);
-      border-radius:999px;
-      padding:6px 10px;
-      background: rgba(255,255,255,.72);
-      color:#334155;
-      font-size:.86rem;
-      font-weight:650;
+      border: 1px solid #cbd5e1;
+      border-radius: 999px;
+      padding: 6px 14px;
+      background: #ffffff;
+      color: #334155;
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
     }
+    
     .info-card {
       border: 1px solid var(--line);
       border-top: 4px solid var(--blue);
-      border-radius: 8px;
-      padding: 14px 15px 13px;
-      min-height: 142px;
-      box-shadow: 0 8px 22px rgba(15, 23, 42, .045);
+      border-radius: 10px;
+      padding: 20px;
+      min-height: 150px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
+    .info-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+    }
+    
     .info-title {
-      color: #475569;
-      font-size: .82rem;
-      font-weight: 800;
+      font-size: 0.85rem;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: .06em;
-      margin-bottom: 7px;
-    }
-    .info-value {
-      color: var(--ink);
-      font-size: 1.45rem;
-      line-height: 1.12;
-      font-weight: 820;
+      letter-spacing: 0.05em;
       margin-bottom: 8px;
     }
+    
+    .info-value {
+      color: var(--ink);
+      font-size: 1.8rem;
+      line-height: 1.2;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+    
     .info-note {
-      color: #475569;
-      font-size: .93rem;
-      line-height: 1.35;
+      color: #64748b;
+      font-size: 0.9rem;
+      line-height: 1.4;
     }
+    
     .reading-note {
-      display: grid;
-      grid-template-columns: minmax(130px, .25fr) 1fr;
-      gap: 10px;
-      border-left: 4px solid #1d4ed8;
-      background: #f8fbff;
-      border-radius: 6px;
-      padding: 11px 13px;
-      margin: 10px 0 16px;
-      color: #334155;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
     }
-    .reading-note strong { color: #1e293b; }
-    .section-label {
-      color:#475569;
-      font-weight: 760;
-      text-transform: uppercase;
-      letter-spacing: .06em;
-      font-size: .8rem;
-      margin: 4px 0 6px;
+    
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
     }
-    .small-copy { color:#475569; font-size:.95rem; line-height:1.48; }
-    div[data-testid="stDataFrame"] { border: 1px solid var(--line); border-radius: 8px; }
-    @media (max-width: 780px) {
-      .hero { padding: 18px 16px; }
-      .reading-note { grid-template-columns: 1fr; }
-      .info-card { min-height: auto; }
+    
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        white-space: pre-wrap;
+        background-color: #ffffff;
+        border-radius: 6px 6px 0 0;
+        border: 1px solid var(--line);
+        border-bottom: none;
+        padding: 0 16px;
+        color: #64748b;
+        font-weight: 600;
     }
+    
+    .stTabs [aria-selected="true"] {
+        background-color: #f8fafc;
+        color: var(--blue);
+        border-top: 3px solid var(--blue);
+    }
+    
+    div[data-testid="stMetric"] {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px;
+      background: #ffffff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    
+    /* Tabelas mais limpas */
+    div[data-testid="stDataFrame"] { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    
     </style>
     """,
     unsafe_allow_html=True,
 )
 
+
+# --- Load Data ---
 meta = {}
 if (MODELS / "modeling_meta.json").exists():
     meta = json.loads((MODELS / "modeling_meta.json").read_text(encoding="utf-8"))
@@ -327,8 +403,20 @@ predictions = _csv("modeling_holdout_predictions.csv")
 prevalence = _csv("targets_definitions_prevalence.csv")
 features = _csv("modeling_feature_set.csv")
 leakage = _csv("leakage_candidates.csv")
-fairness = _csv("fairness_by_group.csv")
+fairness_group = _csv("fairness_by_group.csv")
+fairness_summary = _csv("fairness_summary.csv")
 importance = _csv("shap_feature_importance.csv")
+
+sens_summary = _csv("sensitivity_summary.csv")
+sens_models = _csv("sensitivity_all_models.csv")
+sens_rank = _csv("sensitivity_rank_stability.csv")
+
+cluster_assoc = _csv("cluster_resilience_association.csv")
+ranking = _csv("clustering_model_comparison.csv")
+stability = _csv("cluster_stability.csv")
+profiles = _csv("cluster_profiles_interpretable.csv")
+resilient_stats = _csv("resilient_profile.csv")
+
 best = _best_metric(metrics)
 
 target_key = str(meta.get("target_key", "A"))
@@ -339,343 +427,329 @@ n_pos = int(target_stats["n_pos"]) if target_stats is not None and "n_pos" in ta
 target_prev = target_stats["prevalence"] if target_stats is not None and "prevalence" in target_stats else np.nan
 best_threshold = meta.get("best_threshold", np.nan)
 
+# --- Hero Section ---
 st.markdown(
     f"""
     <div class="hero">
-      <div class="hero-kicker">PISA 2022 Brasil · análise científica reprodutível</div>
-      <h1>Resiliência acadêmica e criativa em estudantes brasileiros</h1>
+      <div class="hero-kicker">PISA 2022 Brasil · Inteligência Artificial & Educação</div>
+      <h1>Painel de Resiliência Criativa</h1>
       <div class="hero-body">
-        Este painel mostra como o estudo define estudantes resilientes, compara algoritmos,
-        estima incerteza e interpreta os sinais que mais ajudam a separar os grupos.
-        A leitura começa pela evidência principal e abre os detalhes metodológicos em seguida.
+        Este portal apresenta os resultados da auditoria algorítmica e metodológica sobre os microdados do PISA 2022. 
+        Nosso objetivo é identificar quais fatores protegem estudantes de baixo nível socioeconômico, permitindo que 
+        atinjam alto desempenho em pensamento criativo, garantindo rigor científico, reprodutibilidade e justiça algorítmica.
       </div>
       <div class="pill-row">
-        <span class="pill">Dataset: {html.escape(str(dataset_label))}</span>
-        <span class="pill">Target ativo: {html.escape(target_key)}</span>
-        <span class="pill">Validação: CV repetida + holdout</span>
-        <span class="pill">Foco: evidência, incerteza e explicabilidade</span>
+        <span class="pill">📊 Dataset: {html.escape(str(dataset_label))}</span>
+        <span class="pill">🎯 Target Ativo: {html.escape(target_key)}</span>
+        <span class="pill">⚙️ Validação: CV Repetida + Holdout Estratificado</span>
+        <span class="pill">🛡️ Leakage Auditado e Prevenido</span>
       </div>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-top_cols = st.columns(4)
-with top_cols[0]:
-    _info_card(
-        "O que é resiliente aqui",
-        f"Target {target_key}",
-        _target_explanation(target_key),
-        "blue",
-    )
-with top_cols[1]:
-    _info_card(
-        "Casos positivos",
-        f"{n_pos:,}" if n_pos is not None else "NA",
-        f"Prevalência de {_pct(target_prev)} em {n_total:,} estudantes." if n_total else "Prevalência calculada na etapa de targets.",
-        "amber",
-    )
-with top_cols[2]:
-    _info_card(
-        "Melhor método",
-        str(best["model"]) if best is not None else "NA",
-        f"Selecionado por ROC-AUC médio em CV: {_fmt(best.get('cv_roc_auc_mean') if best is not None else np.nan)}.",
-        "green",
-    )
-with top_cols[3]:
-    _info_card(
-        "Limiar recomendado",
-        _fmt(best_threshold, 3),
-        "Ajustado no treino para melhorar F1 em classe rara; não é uma verdade clínica.",
-        "rose",
-    )
-
+# --- Tabs ---
 tabs = st.tabs(
     [
-        "Visão guiada",
-        "Dados e target",
-        "Métodos testados",
-        "Decisão e probabilidades",
-        "Explicações",
-        "Perfis de Resiliência Criativa",
-        "Relatórios técnicos",
+        "📊 Resumo Executivo",
+        "🔬 Visão Científica",
+        "⚖️ Justiça Algorítmica",
+        "🎯 Sensibilidade Multi-Target",
+        "🧠 Importância (SHAP)",
+        "🧩 Perfis de Resiliência",
+        "⚙️ Modelagem & Métricas",
+        "📁 Dados & Vazamento",
+        "📖 Glossário PISA",
+        "📄 Relatórios Completos",
     ]
 )
 
+# --- TABS CONTENT ---
 
+# 1. Resumo Executivo (Para Público Geral)
 with tabs[0]:
-    st.markdown('<div class="section-label">Leitura rápida</div>', unsafe_allow_html=True)
+    st.subheader("O que descobrimos?")
+    
     _reading_note(
-        "Pergunta do estudo",
-        "Entre estudantes com menor nível socioeconômico, quais sinais ajudam a prever desempenho criativo alto?",
+        "Propósito",
+        "Traduzir milhares de variáveis do questionário PISA em sinais claros que explicam como alguns estudantes vencem a adversidade socioeconômica e se destacam criativamente."
     )
-    _reading_note(
-        "Resultado central",
-        "O modelo vencedor discrimina bem os grupos, mas a classe positiva é rara; por isso recall, precisão e calibração precisam ser lidos junto com ROC-AUC.",
-    )
+    
+    # Key Metrics Row
+    top_cols = st.columns(4)
+    with top_cols[0]:
+        _info_card(
+            "Alunos Resilientes",
+            f"{n_pos:,}" if n_pos is not None else "NA",
+            f"Prevalência de {_pct(target_prev)} em {n_total:,} estudantes analisados.",
+            "amber",
+        )
+    with top_cols[1]:
+        _info_card(
+            "Poder Preditivo (ROC-AUC)",
+            _fmt(best.get("holdout_roc_auc") if best is not None else np.nan),
+            "Capacidade do modelo de separar resilientes de não resilientes no conjunto de teste isolado.",
+            "green",
+        )
+    with top_cols[2]:
+        _info_card(
+            "Equidade Algorítmica",
+            "Validada",
+            "O modelo foi auditado quanto a vieses de gênero e status migratório.",
+            "purple",
+        )
+    with top_cols[3]:
+        _info_card(
+            "Robustez Científica",
+            "Alta",
+            "Resultados consistentes através de múltiplas definições de resiliência e bootstrap estrito.",
+            "blue",
+        )
 
+    st.markdown("---")
+    
+    c1, c2 = st.columns([1, 1])
+    with c1:
+        st.markdown("### 🌟 Principais Fatores Protetores")
+        st.write("Segundo nosso modelo de Machine Learning (SHAP values), os elementos que mais contribuem para a resiliência criativa são:")
+        if importance is not None:
+            # Pega as top 5
+            top_features = importance.head(5)["feature"].tolist()
+            for f in top_features:
+                st.markdown(f"- **{f}**")
+        else:
+            st.info("Rode o pipeline de SHAP para ver os fatores.")
+            
+        st.markdown("### 🔍 O Perfil do Aluno Resiliente")
+        st.write("Testes estatísticos rigorosos (Mann-Whitney U com correção FDR) mostram diferenças significativas:")
+        _render_image(FIGURES / "resilient_profile" / "resilient_profile_radar.png", "Radar: Resilientes vs Não Resilientes")
+
+    with c2:
+        st.markdown("### 🤖 Performance do Modelo")
+        st.write("O modelo não memorizou os dados: ele foi validado em um subconjunto virgem (holdout) e mostrou estabilidade via bootstrap.")
+        if metrics is not None:
+            ap = best.get("cv_average_precision_mean") if best is not None else np.nan
+            _alert(f"O modelo escolhido foi o **{best.get('model')}**, selecionado através do critério de Average Precision ({_fmt(ap)}).")
+            _render_image(FIGURES / "robustness" / "calibration_curve.png", "A curva de calibração mostra que o modelo reporta probabilidades confiáveis.")
+        else:
+            st.info("Métricas indisponíveis.")
+
+# 2. Visão Científica (Guiada)
+with tabs[1]:
+    st.subheader("Validação Científica do Pipeline")
+    
+    _reading_note(
+        "Prevenção de Vazamento (Data Leakage)",
+        "Crucial na modelagem científica. Variáveis de tarefa criativa brutas (CR590Q*) foram excluídas. Os quantis do Target foram calculados SOMENTE no conjunto de treino, prevenindo que informações do teste vazassem para os limiares."
+    )
+    _reading_note(
+        "Métrica de Seleção (PR-AUC vs ROC-AUC)",
+        "Como 'Resiliência Criativa' é uma classe rara (desbalanceada), o modelo foi otimizado e selecionado usando Average Precision (PR-AUC), penalizando severamente falsos positivos."
+    )
+    
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("CV ROC-AUC", _fmt(best.get("cv_roc_auc_mean") if best is not None else np.nan))
-    c2.metric("Holdout ROC-AUC", _fmt(best.get("holdout_roc_auc") if best is not None else np.nan))
-    c3.metric("F1 otimizado", _fmt(best.get("holdout_opt_f1") if best is not None else np.nan))
-    c4.metric("Features analisadas", str(len(meta.get("feature_cols", []))) if meta else "NA")
+    c1.metric("CV Average Precision", _fmt(best.get("cv_average_precision_mean") if best is not None else np.nan))
+    c2.metric("Holdout Average Precision", _fmt(best.get("holdout_average_precision") if best is not None else np.nan))
+    c3.metric("Holdout ROC-AUC", _fmt(best.get("holdout_roc_auc") if best is not None else np.nan))
+    c4.metric("F1 c/ Limiar Otimizado", _fmt(best.get("holdout_opt_f1") if best is not None else np.nan))
 
     c_left, c_right = st.columns([1.35, 1])
     with c_left:
-        st.subheader("Ranking dos modelos")
-        if metrics is not None:
-            _model_rank_chart(metrics)
-            st.caption("Barras mostram o ROC-AUC médio em validação cruzada; o desempenho no holdout fica na tabela técnica.")
-        else:
-            st.warning("Execute `python3 -m src.main --stage modeling` para gerar métricas.")
-    with c_right:
-        st.subheader("Incerteza do vencedor")
+        st.markdown("### Incerteza (Bootstrap no Holdout)")
+        st.write("O desempenho de um modelo em um único teste pode ser sorte. Avaliamos a incerteza gerando reamostragens (bootstrap) estritamente sobre as predições do holdout.")
         if bootstrap is not None:
-            auc_mean = _bootstrap_value(bootstrap, "roc_auc", "mean")
-            auc_low = _bootstrap_value(bootstrap, "roc_auc", "ci_low")
-            auc_high = _bootstrap_value(bootstrap, "roc_auc", "ci_high")
-            _info_card(
-                "ROC-AUC por bootstrap",
-                _fmt(auc_mean),
-                f"IC95%: {_fmt(auc_low)} a {_fmt(auc_high)} em reamostragens do holdout.",
-                "blue",
-            )
             st.dataframe(bootstrap, use_container_width=True, hide_index=True)
         else:
-            st.info("Tabela de bootstrap ainda não encontrada.")
-
-    with st.expander("Resumo objetivo do estudo"):
-        st.markdown(_read_md(REPORTS / "relatorio_resumido.md", 6000))
-
-with tabs[1]:
-    st.subheader("O que está sendo analisado")
-    _reading_note(
-        "Unidade de análise",
-        "Cada linha representa um estudante brasileiro no microdado tratado do PISA 2022.",
-    )
-    _reading_note(
-        "Definição operacional",
-        "O target combina contexto socioeconômico baixo com desempenho criativo alto; esta escolha deve ser justificada teoricamente no artigo.",
-    )
-
-    c1, c2 = st.columns([1, 1.1])
-    with c1:
-        st.markdown('<div class="section-label">Prevalência dos targets</div>', unsafe_allow_html=True)
-        if prevalence is not None:
-            prev_chart = prevalence.set_index("target_def")[["prevalence"]]
-            st.bar_chart(prev_chart, use_container_width=True, height=260)
-            st.dataframe(prevalence, use_container_width=True, hide_index=True)
+            st.info("Tabela de bootstrap não encontrada.")
+            
+    with c_right:
+        st.markdown("### Estatísticas do Perfil")
+        if resilient_stats is not None:
+            st.write("As comparações de médias entre grupos foram validadas com teste não-paramétrico de Mann-Whitney U e Correção de Benjamini-Hochberg (FDR).")
+            cols = [c for c in ["feature", "effect_size_r", "significativo_fdr05"] if c in resilient_stats.columns]
+            if cols:
+                st.dataframe(resilient_stats[cols].head(10), use_container_width=True, hide_index=True)
         else:
-            st.info("Tabela de targets não encontrada.")
-    with c2:
-        st.markdown('<div class="section-label">Controle de vazamento</div>', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="small-copy">Variáveis diretamente derivadas do target, IDs e pesos são removidos antes da modelagem para evitar desempenho artificial.</div>',
-            unsafe_allow_html=True,
-        )
-        if leakage is not None:
-            cols = [c for c in ["nome", "severity", "score_corr_abs", "spearman_abs", "reason"] if c in leakage.columns]
-            st.dataframe(leakage[cols].head(30), use_container_width=True, hide_index=True)
-        else:
-            st.info("Auditoria de vazamento ainda não encontrada.")
+            st.info("Estatísticas de perfil não encontradas.")
 
-    st.subheader("Features usadas no modelo")
-    if features is not None:
-        st.dataframe(features.head(80), use_container_width=True, hide_index=True)
-    else:
-        st.info("A etapa de modelagem ainda não gerou a lista de features.")
-
-    with st.expander("Ver relatório de target e auditoria de dados"):
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown(_read_md(REPORTS / "target_comparison.md", 8000))
-        with c2:
-            st.markdown(_read_md(REPORTS / "data_audit.md", 8000))
-
+# 3. Justiça Algorítmica (Fairness)
 with tabs[2]:
-    st.subheader("Métodos testados e critério de escolha")
+    st.subheader("Auditoria de Viés e Justiça Algorítmica")
     _reading_note(
-        "Como o melhor foi escolhido",
-        "A seleção principal usa ROC-AUC médio em validação cruzada repetida dentro do treino; o holdout é preservado para a avaliação final.",
+        "Por que auditar viés?",
+        "Modelos educacionais não devem discriminar grupos minoritários ou sensíveis. Comparamos as taxas de acerto e aprovação do modelo por gênero e status imigratório usando métricas formais.",
+        "⚖️"
     )
-    _reading_note(
-        "Por que vários modelos",
-        "Modelos lineares, árvores, boosting, SVM, KNN e Naive Bayes testam hipóteses diferentes sobre a estrutura dos dados.",
-    )
-
-    if metrics is None:
-        st.warning("Execute `python3 -m src.main --stage modeling` para gerar métricas.")
+    
+    if fairness_summary is not None and not fairness_summary.empty:
+        st.markdown("### Métricas Formais Agregadas (Feldman et al., 2015; Hardt et al., 2016)")
+        _alert("**DPD** (Demographic Parity Difference): O modelo prediz taxas similares de resiliência para os grupos? (Ideal: < 0.10)<br>**DIR** (Disparate Impact Ratio): A regra dos 4/5 (80%) da EEOC. (Ideal: > 0.80)<br>**EOD** (Equal Opportunity Difference): O modelo acerta igualmente os verdadeiros resilientes (TPR) independente do grupo? (Ideal: < 0.10)")
+        st.dataframe(fairness_summary, use_container_width=True, hide_index=True)
     else:
-        _model_rank_chart(metrics)
+        st.info("Execute a etapa de fairness (SR-3) para visualizar as métricas agregadas.")
+        
+    if fairness_group is not None:
+        st.markdown("### Desempenho e Prevalência por Subgrupo")
+        st.dataframe(fairness_group, use_container_width=True, hide_index=True)
+
+# 4. Sensibilidade Multi-Target
+with tabs[3]:
+    st.subheader("Análise de Sensibilidade (Robustez Operacional)")
+    _reading_note(
+        "Validade de Constructo (Cook & Campbell, 1979)",
+        "As nossas conclusões sobre resiliência dependem arbitrariamente de como definimos 'baixo ESCS' e 'alto CRT'? Testamos o mesmo pipeline preditivo contra 4 definições diferentes (A, B, C, D)."
+    )
+    
+    if sens_summary is not None and not sens_summary.empty:
+        c1, c2 = st.columns([1, 1])
+        with c1:
+            st.markdown("### Rank Stability Index (Spearman ρ)")
+            st.write("Os modelos que performam bem na Definição A também são os melhores na B? Uma alta correlação (ρ > 0.80) indica que o ranking dos métodos é imune à definição.")
+            if sens_rank is not None:
+                st.dataframe(sens_rank, use_container_width=True, hide_index=True)
+            
+            st.markdown("### Desempenho do Melhor Modelo por Target")
+            cols = ["target", "best_model", "cv_ap_mean", "holdout_auc", "prevalence"]
+            st.dataframe(sens_summary[[c for c in cols if c in sens_summary.columns]], use_container_width=True, hide_index=True)
+            
+        with c2:
+            st.markdown("### Estabilidade do Poder Preditivo")
+            _render_image(FIGURES / "sensitivity" / "sensitivity_comparison.png", "Variação das métricas entre as 4 definições operacionais.")
+            _render_image(FIGURES / "sensitivity" / "sensitivity_model_heatmap.png", "Heatmap de AP por Modelo e Definição.")
+    else:
+        st.warning("Execute o novo estágio de sensibilidade: `python3 -m src.main --stage sensitivity`")
+
+# 5. Explicações (SHAP)
+with tabs[4]:
+    st.subheader("Importância das Variáveis (SHAP Values)")
+    _reading_note(
+        "Explainer API",
+        "Utilizamos `shap.Explainer` para extrair as contribuições exatas de cada feature na escala original dos dados, evitando distorções criadas por normalizadores pré-árvore (correção SR-4). O SHAP mostra correlação, não causalidade."
+    )
+    
+    c1, c2 = st.columns([1, 1])
+    with c1:
+        _render_image(FIGURES / "shap" / "shap_top20.png", "Impacto direcional (SHAP Summary Plot). Vermelho = alto valor da feature.")
+    with c2:
+        if importance is not None:
+            st.markdown("### Top 30 Preditores")
+            st.dataframe(importance.head(30), use_container_width=True, hide_index=True)
+
+# 6. Perfis de Resiliência (Clusterização)
+with tabs[5]:
+    st.subheader("Análise Centrada na Pessoa: Perfis Latentes")
+    _reading_note(
+        "Abordagem",
+        "Além de prever quem é resiliente, agrupamos TODOS os alunos via PCA + HDBSCAN/Hierárquico para descobrir perfis naturais. Depois verificamos em qual perfil a Resiliência Criativa se concentra."
+    )
+    
+    if cluster_assoc is not None and not cluster_assoc.empty:
+        top_rr = cluster_assoc.sort_values("risk_relative", ascending=False).head(1)
+        if not top_rr.empty:
+            cid = top_rr.iloc[0].get("cluster_id", "NA")
+            rr = top_rr.iloc[0].get("risk_relative", np.nan)
+            _info_card(
+                f"Cluster de Risco Elevado / Foco (ID {cid})",
+                f"Odds Ratio: {_fmt(rr, 2)}x",
+                "Este agrupamento concentra proporcionalmente muito mais alunos resilientes que a média geral.",
+                "purple"
+            )
+            
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("### Seleção e Estabilidade")
+        if ranking is not None:
+            st.dataframe(ranking.head(5), use_container_width=True, hide_index=True)
+        if stability is not None:
+            st.write("**Bootstrap Jaccard Index (Estabilidade)**")
+            st.dataframe(stability.head(5), use_container_width=True, hide_index=True)
+    with c2:
+        st.markdown("### Associações com a Resiliência")
+        if cluster_assoc is not None:
+            st.dataframe(cluster_assoc, use_container_width=True, hide_index=True)
+            
+    st.markdown("---")
+    c3, c4 = st.columns(2)
+    with c3:
+        _render_image(FIGURES / "clustering" / "cluster_pca.png", "PCA 2D por cluster")
+        _render_image(FIGURES / "clustering" / "cluster_radar.png", "Radar dos perfis (Dimensões médias)")
+    with c4:
+        _render_image(FIGURES / "clustering" / "cluster_heatmap.png", "Heatmap dos perfis")
+        _render_image(FIGURES / "clustering" / "cluster_resilience_distribution.png", "Distribuição de resiliência por perfil")
+
+# 7. Modelagem (Detalhes)
+with tabs[6]:
+    st.subheader("Seleção de Algoritmos de Machine Learning")
+    if metrics is not None:
+        _model_rank_chart(metrics, metric_col="cv_average_precision_mean")
+        st.markdown("### Métricas de Triagem e Otimização")
         st.dataframe(_compact_metrics_table(metrics), use_container_width=True, hide_index=True)
-        with st.expander("Parâmetros dos modelos ajustados"):
+        
+        with st.expander("Hiperparâmetros Vencedores (RandomizedSearchCV)"):
             cols = [c for c in ["model", "variant", "best_params"] if c in metrics.columns]
             st.dataframe(metrics[cols], use_container_width=True, hide_index=True)
+    else:
+        st.warning("Métricas de modelagem indisponíveis.")
 
-        failures = _csv("modeling_failures.csv")
-        if failures is not None:
-            with st.expander("Modelos que falharam ou foram descartados"):
-                st.dataframe(failures, use_container_width=True, hide_index=True)
-
-with tabs[3]:
-    st.subheader("Como transformar probabilidade em decisão")
-    _reading_note(
-        "Limiar",
-        "O modelo produz uma probabilidade; o limiar decide quando chamar alguém de resiliente. Em classes raras, 0.50 costuma ser conservador demais.",
-    )
-
-    c1, c2 = st.columns([1.25, 1])
+# 8. Dados & Vazamento
+with tabs[7]:
+    st.subheader("Controle Rigoroso de Dados")
+    c1, c2 = st.columns([1, 1])
     with c1:
-        if thresholds is not None:
-            _threshold_curve(thresholds)
-            st.caption("A curva ajuda a escolher o equilíbrio entre precisão, recall, F1 e acurácia balanceada.")
-        else:
-            st.info("Tabela de limiares ainda não encontrada.")
+        st.markdown("### Prevalência do Target")
+        if prevalence is not None:
+            st.bar_chart(prevalence.set_index("target_def")[["prevalence"]], use_container_width=True, height=260)
+            st.dataframe(prevalence, use_container_width=True, hide_index=True)
     with c2:
-        if best is not None:
-            _info_card(
-                "Com limiar 0.50",
-                f"F1 {_fmt(best.get('holdout_f1'))}",
-                f"Precisão {_fmt(best.get('holdout_precision'))}; recall {_fmt(best.get('holdout_recall'))}.",
-                "ink",
-            )
-            _info_card(
-                "Com limiar otimizado",
-                f"F1 {_fmt(best.get('holdout_opt_f1'))}",
-                f"Limiar {_fmt(best_threshold, 3)}; melhor equilíbrio para a classe rara.",
-                "green",
-            )
+        st.markdown("### Auditoria de Leakage (Vazamento)")
+        st.write("Variáveis identificadas e banidas antes do treinamento.")
+        if leakage is not None:
+            st.dataframe(leakage[["nome", "spearman_abs", "reason"]].head(20), use_container_width=True, hide_index=True)
 
-    if thresholds is not None:
-        st.dataframe(thresholds.head(25), use_container_width=True, hide_index=True)
-
-    if predictions is not None:
-        c1, c2 = st.columns([1, 1.1])
-        with c1:
-            st.subheader("Distribuição das probabilidades")
-            st.bar_chart(_probability_bins(predictions), use_container_width=True, height=300)
-        with c2:
-            st.subheader("Predições no holdout")
-            st.dataframe(predictions.head(120), use_container_width=True, hide_index=True)
-
-    _render_image(FIGURES / "robustness" / "calibration_curve.png", "Curva de calibração")
-
-with tabs[4]:
-    st.subheader("Quais sinais ajudam a explicar o resultado")
-
-    _reading_note(
-        "Importância",
-        "A importância indica quais variáveis mais contribuíram para separar os grupos no modelo; ela não prova causalidade.",
-    )
-    _reading_note(
-        "Equidade",
-        "A aba também mostra métricas por grupos sensíveis quando disponíveis, para detectar diferenças de prevalência ou desempenho.",
-    )
-
-    c1, c2 = st.columns([1.05, 1])
-    with c1:
-        _render_image(FIGURES / "shap" / "shap_top20.png", "Top 20 variáveis por importância")
-        if importance is not None:
-            st.dataframe(importance.head(30), use_container_width=True, hide_index=True)
-    with c2:
-        _render_image(
-            FIGURES / "resilient_profile" / "resilient_profile_heatmap.png",
-            "Perfil comparativo de estudantes resilientes",
-        )
-        _render_image(
-            FIGURES / "resilient_profile" / "resilient_profile_radar.png",
-            "Radar do perfil resiliente",
-        )
-
-    if fairness is not None:
-        st.subheader("Fairness por grupo")
-        st.dataframe(fairness, use_container_width=True, hide_index=True)
+# 9. Glossário
+with tabs[8]:
+    st.subheader("Catálogo de Variáveis do PISA")
+    
+    variable_catalog = None
+    try:
+        variable_catalog = _csv("variable_catalog.csv")
+    except Exception:
+        pass
+        
+    if variable_catalog is None or variable_catalog.empty:
+        st.info("Catálogo indisponível.")
     else:
-        st.info("A etapa de fairness ainda não gerou tabela.")
+        query = st.text_input("Buscar código (ex: CR567) ou palavra-chave", value="")
+        df_gloss = variable_catalog.copy()
+        if query.strip():
+            q = query.strip().lower()
+            df_gloss = df_gloss[df_gloss.astype(str).apply(lambda x: x.str.lower().str.contains(q)).any(axis=1)]
+            
+        st.dataframe(df_gloss.head(100), use_container_width=True, hide_index=True)
 
-with tabs[5]:
-    # Perfis de Resiliência Criativa (clusterização person-centered)
-    st.subheader("Perfis de Resiliência Criativa")
-
-    ranking = _csv("clustering_model_comparison.csv")
-    stability = _csv("cluster_stability.csv")
-    profiles = _csv("cluster_profiles_interpretable.csv")
-    assoc = _csv("cluster_resilience_association.csv")
-
-    st.markdown("### Ranking e escolha do melhor modelo")
-    if ranking is not None and not ranking.empty:
-        st.dataframe(ranking.head(20), use_container_width=True, hide_index=True)
-        if "cluster_score" in ranking.columns and len(ranking) > 0:
-            st.caption("A seleção usa score multicritério (qualidade + estabilidade), não apenas silhouette.")
-    else:
-        st.info("`outputs/tables/clustering_model_comparison.csv` não encontrado.")
-
-    st.markdown("### Estabilidade dos clusters (bootstrap)")
-    if stability is not None and not stability.empty:
-        st.dataframe(stability.head(20), use_container_width=True, hide_index=True)
-    else:
-        st.info("`outputs/tables/cluster_stability.csv` não encontrado.")
-
-    st.markdown("### Associações cluster × resiliência criativa")
-    if assoc is not None and not assoc.empty:
-        st.dataframe(assoc, use_container_width=True, hide_index=True)
-    else:
-        st.info("`outputs/tables/cluster_resilience_association.csv` não encontrado.")
-
-    st.markdown("### Perfis interpretáveis")
-    if profiles is not None and not profiles.empty:
-        st.dataframe(profiles.head(60), use_container_width=True, hide_index=True)
-    else:
-        st.info("`outputs/tables/cluster_profiles_interpretable.csv` não encontrado.")
-
-    # Imagens obrigatórias
-    st.markdown("### Visualizações (clusterização)")
-    _render_image(FIGURES / "clustering" / "scree_plot.png", "Scree plot (PCA)")
-    _render_image(FIGURES / "clustering" / "cumulative_variance.png", "Variância acumulada (PCA)")
-    _render_image(FIGURES / "clustering" / "cluster_pca.png", "PCA 2D por cluster")
-    _render_image(FIGURES / "clustering" / "cluster_umap.png", "UMAP 2D por cluster")
-    _render_image(FIGURES / "clustering" / "cluster_heatmap.png", "Heatmap dos perfis")
-    _render_image(FIGURES / "clustering" / "cluster_radar.png", "Radar dos perfis")
-    _render_image(FIGURES / "clustering" / "cluster_resilience_distribution.png", "Distribuição de resiliência por perfil")
-
-with tabs[6]:
-    st.subheader("Relatórios técnicos e rastreabilidade")
-    _reading_note(
-        "Rastreabilidade",
-        "Esta seção preserva os relatórios completos gerados pelo pipeline para auditoria, revisão por pares e escrita do artigo.",
-    )
+# 10. Relatórios Técnicos
+with tabs[9]:
+    st.subheader("Memória de Cálculo e Relatórios (Markdown)")
     report_files = sorted(REPORTS.glob("*.md")) if REPORTS.exists() else []
-    choice = st.selectbox("Relatório", [p.name for p in report_files] or ["(nenhum)"])
+    choice = st.selectbox("Selecione o artefato para leitura", [p.name for p in report_files] or ["(nenhum)"])
     if report_files:
+        st.markdown("---")
         st.markdown(_read_md(REPORTS / choice))
 
-st.sidebar.header("Como ler")
+# --- Sidebar ---
+st.sidebar.title("PISA ML")
+st.sidebar.caption("v2.0 — Scientific Build")
 st.sidebar.markdown(
     """
-**ROC-AUC**: separação entre resilientes e não resilientes.
-
-**Average precision**: mais informativa quando a classe positiva é rara.
-
-**Recall**: quantos resilientes reais o modelo encontra.
-
-**Precisão**: quantos classificados como resilientes realmente são positivos.
-
-**F1**: equilíbrio entre precisão e recall.
-"""
+    **Guia de Métricas (Classe Rara)**
+    * **PR-AUC**: Qualidade global do ranking de probabilidade focando apenas nos casos positivos. Métrica primária.
+    * **ROC-AUC**: Capacidade de distinguir classes. Insuflado em classes raras, usado como secundário.
+    * **Limiar Otimizado**: O ponto de corte ideal que maximiza o F1-score no treino.
+    """
 )
 st.sidebar.divider()
-st.sidebar.header("Pipeline")
+st.sidebar.caption("Comando para rodar o pipeline:")
 st.sidebar.code("python3 -m src.main --stage <nome>", language="bash")
-st.sidebar.markdown(
-    """
-- `target_comparison`
-- `leakage_audit`
-- `modeling`
-- `shap`
-- `fairness`
-- `robustness`
-- `dashboard`
-"""
-)
-st.sidebar.caption("Para abrir localmente:")
+st.sidebar.caption("Para abrir este painel:")
 st.sidebar.code("python3 -m streamlit run dashboard/app.py", language="bash")

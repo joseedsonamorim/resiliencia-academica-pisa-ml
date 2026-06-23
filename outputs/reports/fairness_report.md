@@ -1,22 +1,37 @@
 # Fairness (Fase 10)
 
-- Dataset: `pisa_brasil_estudo_limpo.csv`
+- Dataset: `PISA2022_BRASIL_FULL.csv`
 - Target: **A**
-- Variáveis sensíveis analisadas: ST004D01T, Grupo_ESCS, HISCED
+- Variáveis sensíveis analisadas: ST004D01T, HISCED
 
-| sensitive_var   |   group |    n |   prevalence |   weighted_prevalence |   group_roc_auc |   mean_predicted_proba |
-|:----------------|--------:|-----:|-------------:|----------------------:|----------------:|-----------------------:|
-| Grupo_ESCS      |       1 |  959 |   0.171011   |             0.160552  |        0.901868 |             0.134072   |
-| Grupo_ESCS      |       2 |  959 |   0          |             0         |      nan        |             0.021617   |
-| Grupo_ESCS      |       3 |  958 |   0          |             0         |      nan        |             0.00426727 |
-| Grupo_ESCS      |       4 |  958 |   0          |             0         |      nan        |             0.00101939 |
-| HISCED          |       1 |  145 |   0.2        |             0.169234  |        0.909631 |             0.173439   |
-| HISCED          |      10 |  377 |   0          |             0         |      nan        |             0.00122487 |
-| HISCED          |       2 |  266 |   0.172932   |             0.161544  |        0.904249 |             0.153871   |
-| HISCED          |       3 |  392 |   0.142857   |             0.134605  |        0.930405 |             0.131887   |
-| HISCED          |       5 |  932 |   0.0332618  |             0.0332603 |        0.959203 |             0.0351551  |
-| HISCED          |       7 |  516 |   0.00387597 |             0.0027834 |        0.981518 |             0.00324707 |
-| HISCED          |       8 |  876 |   0          |             0         |      nan        |             0.00139561 |
-| HISCED          |       9 |  304 |   0          |             0         |      nan        |             0.00141269 |
-| ST004D01T       |       1 | 1957 |   0.0485437  |             0.0468432 |        0.975581 |             0.0450077  |
-| ST004D01T       |       2 | 1877 |   0.0367608  |             0.0344727 |        0.971656 |             0.0353169  |
+## Métricas formais de equidade (SR-3)
+
+> **DPD** (Demographic Parity Difference): diferença máxima de prevalência entre grupos. Limiar recomendado: < 0.10.
+> **DIR** (Disparate Impact Ratio): razão min/max de prevalência. Limiar recomendado: > 0.80 (EEOC 4/5 rule).
+> **EOD** (Equal Opportunity Difference): diferença de TPR entre grupos. Limiar recomendado: < 0.10.
+
+```csv
+sensitive_var,n_groups,demographic_parity_difference,disparate_impact_ratio,equal_opportunity_difference,max_auc_gap,dpd_ok_lt010,dir_ok_gt080
+HISCED,9,0.11265646731571627,0.0,0.5365853658536586,0.06541209300060347,False,False
+ST004D01T,2,0.008144125840778737,0.7156818233547245,0.03961900309706068,0.01612554427496904,True,False
+```
+
+## Métricas por grupo
+
+```csv
+sensitive_var,group,n,n_pos,prevalence,weighted_prevalence,weighted_prevalence_se,group_roc_auc,mean_predicted_proba,tpr,fpr
+HISCED,1.0,389,37,0.09511568123393316,0.0830018356479142,0.013259286687797063,0.9136977886977887,0.06483731418848038,0.4594594594594595,0.03125
+HISCED,10.0,970,0,0.0,0.0,0.0,,0.004355546552687883,,0.0
+HISCED,2.0,719,81,0.11265646731571627,0.10781725458166588,0.012522151360754599,0.9015441774062464,0.08302763104438782,0.49382716049382713,0.03918495297805643
+HISCED,3.0,1101,82,0.07447774750227067,0.07036589339185725,0.008009411135175197,0.9032288948993513,0.05835822969675064,0.5365853658536586,0.02453385672227674
+HISCED,5.0,2483,64,0.02577527184857028,0.025223737299222896,0.0034539636690418033,0.8844951426209178,0.024136945605278015,0.421875,0.00413393964448119
+HISCED,7.0,1404,0,0.0,0.0,0.0,,0.012206601910293102,,0.0
+HISCED,8.0,2378,0,0.0,0.0,0.0,,0.009636590257287025,,0.0
+HISCED,9.0,813,0,0.0,0.0,0.0,,0.007098670117557049,,0.0
+HISCED,NA,541,2,0.0036968576709796672,0.004182416469379065,0.003207335074040207,0.9499072356215212,0.006388046313077211,0.0,0.0018552875695732839
+ST004D01T,1.0,5481,157,0.028644407954752784,0.02787761070086071,0.002711032827115763,0.9252896390339145,0.027424896135926247,0.46496815286624205,0.007888805409466567
+ST004D01T,2.0,5317,109,0.020500282113974047,0.019671639273299724,0.0016574511281820577,0.9091640947589454,0.021119628101587296,0.5045871559633027,0.00576036866359447
+```
+
+## Nota metodológica
+Grupos com n < 30 foram excluídos por instabilidade estatística. AUCs de grupos pequenos têm alta variância e devem ser interpretadas com cautela. Para publicação, reportar também intervalos de confiança por grupo via bootstrap.

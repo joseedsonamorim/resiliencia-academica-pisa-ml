@@ -1,0 +1,3 @@
+sensitive_var,n_groups,demographic_parity_difference,disparate_impact_ratio,equal_opportunity_difference,max_auc_gap,dpd_ok_lt010,dir_ok_gt080
+HISCED,9,0.11265646731571627,0.0,0.5365853658536586,0.06541209300060347,False,False
+ST004D01T,2,0.008144125840778737,0.7156818233547245,0.03961900309706068,0.01612554427496904,True,False

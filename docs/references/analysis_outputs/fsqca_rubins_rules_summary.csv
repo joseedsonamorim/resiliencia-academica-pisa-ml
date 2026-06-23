@@ -1,0 +1,5 @@
+"Configuration","Frequency"
+"fz_ESCS",3
+"fz_ESCS*fz_BELONG + fz_ESCS*fz_TEACHSUP",3
+"fz_ESCS*~fz_ICTHOME + fz_ESCS*fz_BELONG",2
+"fz_ESCS*fz_BELONG + fz_ESCS*~fz_ICTHOME*fz_TEACHSUP",2
