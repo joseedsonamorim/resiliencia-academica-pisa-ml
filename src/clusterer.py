@@ -425,6 +425,63 @@ def _heatmap_chart(
     img.save(path)
 
 
+# ---------------------------------------------------------------------------
+# Human-readable labels for PISA variables shown in the radar chart.
+# Format: CODE -> "Nome curto (descrição)"
+# ---------------------------------------------------------------------------
+_RADAR_LABELS: dict[str, str] = {
+    # Creative Thinking items (time-on-task)
+    "CR590Q43TT": "Tarefa 43 (tempo na tarefa)",
+    "CR590Q03TT": "Tarefa 03 (tempo na tarefa)",
+    "CR590Q38TT": "Tarefa 38 (tempo na tarefa)",
+    "CR590Q20TT": "Tarefa 20 (tempo na tarefa)",
+    "CR590Q47TT": "Tarefa 47 (tempo na tarefa)",
+    "CR590Q52TT": "Tarefa 52 (tempo na tarefa)",
+    "CR590Q22TT": "Tarefa 22 (tempo na tarefa)",
+    "CR590Q04TT": "Tarefa 04 (tempo na tarefa)",
+    "CR590Q35TT": "Tarefa 35 (tempo na tarefa)",
+    "CR590Q01TT": "Tarefa 01 (tempo na tarefa)",
+    "CR590Q26TT": "Tarefa 26 (tempo na tarefa)",
+    "CR590Q28TT": "Tarefa 28 (tempo na tarefa)",
+    "CR590Q36TT": "Tarefa 36 (tempo na tarefa)",
+    "CR590Q40TT": "Tarefa 40 (tempo na tarefa)",
+    # Creative Thinking scores
+    "CR590Q04S": "Tarefa 04 (pontuação criativa)",
+    "CR590Q05S": "Tarefa 05 (pontuação criativa)",
+    "CR590Q03S": "Tarefa 03 (pontuação criativa)",
+    "CR590Q23S": "Tarefa 23 (pontuação criativa)",
+    "CR590Q14S": "Tarefa 14 (pontuação criativa)",
+    # ICT / Technology
+    "ICTRES": "ICTRES (recursos tecnológicos em casa)",
+    "ICTHOME": "ICTHOME (dispositivos no domicílio)",
+    "ICTSCH": "ICTSCH (tecnologia na escola)",
+    "HOMEPOS": "HOMEPOS (posse de bens domésticos)",
+    # Socioeconomic
+    "ESCS": "ESCS (índice socioeconômico e cultural)",
+    "HISCED": "HISCED (escolaridade máxima dos pais)",
+    "HISEI": "HISEI (status ocupacional dos pais)",
+    "WEALTH": "WEALTH (riqueza material familiar)",
+    # School
+    "BELONG": "BELONG (sentimento de pertença à escola)",
+    "STUBEHA": "STUBEHA (comportamento dos alunos)",
+    "TEACHSUP": "TEACHSUP (suporte do professor)",
+    "DISCLIMA": "DISCLIMA (clima disciplinar em sala)",
+    "SCHRISK": "SCHRISK (percepção de risco escolar)",
+    # Plausible Values
+    "PV1READ": "PV1READ (desempenho em leitura)",
+    "PV1SCIE": "PV1SCIE (desempenho em ciências)",
+    "PV1MATH": "PV1MATH (desempenho em matemática)",
+}
+
+# Cluster name mapping: cluster_id (int or float) -> display name
+_CLUSTER_NAMES: dict = {
+    0: "Cluster 1 — Apoiado",
+    1: "Cluster 2 — Persistente",
+    0.0: "Cluster 1 — Apoiado",
+    1.0: "Cluster 2 — Persistente",
+}
+
+
 def _radar_chart(
     path: Path,
     profiles: pd.DataFrame,
@@ -433,7 +490,7 @@ def _radar_chart(
 ) -> None:
     width, height = 1200, 1200
     center = (width // 2, height // 2 + 20)
-    radius = 420
+    radius = 380
     img = Image.new("RGB", (width, height), "white")
     draw = ImageDraw.Draw(img)
     draw.text((70, 40), title, fill="#0f172a", font=_font(30))
@@ -457,9 +514,19 @@ def _radar_chart(
         x2 = center[0] + math.cos(a) * radius
         y2 = center[1] + math.sin(a) * radius
         draw.line((center[0], center[1], x2, y2), fill="#cbd5e1", width=2)
-        lx = center[0] + math.cos(a) * (radius + 35)
-        ly = center[1] + math.sin(a) * (radius + 35)
-        draw.text((lx - 35, ly - 8), feat[:16], fill="#334155", font=_font(15))
+        lx = center[0] + math.cos(a) * (radius + 45)
+        ly = center[1] + math.sin(a) * (radius + 45)
+        # Use human-readable label; fall back to raw code if not mapped
+        label = _RADAR_LABELS.get(feat, feat)
+        # Wrap long labels: split into two lines if needed
+        if len(label) > 22:
+            mid = label.find("(") if "(" in label else len(label) // 2
+            line1 = label[:mid].strip()
+            line2 = label[mid:].strip()
+            draw.text((lx - 60, ly - 14), line1, fill="#334155", font=_font(13))
+            draw.text((lx - 60, ly + 2), line2, fill="#64748b", font=_font(12))
+        else:
+            draw.text((lx - 60, ly - 8), label, fill="#334155", font=_font(13))
 
     for idx, (_, row) in enumerate(profiles.iterrows()):
         color = PALETTE[idx % len(PALETTE)]
@@ -472,7 +539,10 @@ def _radar_chart(
             pts.append(pts[0])
             draw.line(pts, fill=color, width=4)
             draw.polygon(pts[:-1], outline=color)
-        draw.text((80, 130 + idx * 24), f"cluster {row['cluster_id']}", fill=color, font=_font(16))
+        # Use friendly cluster name
+        cluster_id = row["cluster_id"]
+        cluster_label = _CLUSTER_NAMES.get(cluster_id, f"Cluster {cluster_id}")
+        draw.text((80, 130 + idx * 26), cluster_label, fill=color, font=_font(16))
 
     img.save(path)
 
